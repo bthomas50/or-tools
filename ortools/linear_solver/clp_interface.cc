@@ -127,6 +127,7 @@ class CLPInterface : public MPSolverInterface {
   void SetPresolveMode(int value) override;
   void SetScalingMode(int value) override;
   void SetLpAlgorithm(int value) override;
+  void SetMaximumSolutions(int value) override;
 
   // Transforms basis status from CLP enum to MPSolver::BasisStatus.
   MPSolver::BasisStatus TransformCLPBasisStatus(
@@ -629,6 +630,10 @@ void CLPInterface::SetLpAlgorithm(int value) {
                                         value);
     }
   }
+}
+
+void CLPInterface::SetMaximumSolutions(int value) {
+  SetUnsupportedIntegerParam(MPSolverParameters::MAXIMUM_SOLUTIONS);
 }
 
 MPSolverInterface* BuildCLPInterface(MPSolver* const solver) {

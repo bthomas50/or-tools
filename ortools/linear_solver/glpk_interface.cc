@@ -181,6 +181,7 @@ class GLPKInterface : public MPSolverInterface {
   void SetPresolveMode(int value) override;
   void SetScalingMode(int value) override;
   void SetLpAlgorithm(int value) override;
+  void SetMaximumSolutions(int value) override;
 
   void ExtractOldConstraints();
   void ExtractOneConstraint(MPConstraint* const constraint, int* const indices,
@@ -987,6 +988,10 @@ void GLPKInterface::SetLpAlgorithm(int value) {
                                         value);
     }
   }
+}
+
+void GLPKInterface::SetMaximumSolutions(int value) {
+  SetUnsupportedIntegerParam(MPSolverParameters::MAXIMUM_SOLUTIONS);
 }
 
 MPSolverInterface* BuildGLPKInterface(bool mip, MPSolver* const solver) {

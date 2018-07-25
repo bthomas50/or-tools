@@ -91,6 +91,7 @@ class GLOPInterface : public MPSolverInterface {
   void SetPresolveMode(int value) override;
   void SetScalingMode(int value) override;
   void SetLpAlgorithm(int value) override;
+  void SetMaximumSolutions(int value) override;
   bool SetSolverSpecificParametersAsString(
       const std::string& parameters) override;
 
@@ -413,6 +414,10 @@ void GLOPInterface::SetLpAlgorithm(int value) {
                                           value);
       }
   }
+}
+
+void GLOPInterface::SetMaximumSolutions(int value) {
+  SetUnsupportedIntegerParam(MPSolverParameters::MAXIMUM_SOLUTIONS);
 }
 
 bool GLOPInterface::SetSolverSpecificParametersAsString(

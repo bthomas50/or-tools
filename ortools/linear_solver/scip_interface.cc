@@ -110,6 +110,7 @@ class SCIPInterface : public MPSolverInterface {
   void SetPresolveMode(int value) override;
   void SetScalingMode(int value) override;
   void SetLpAlgorithm(int value) override;
+  void SetMaximumSolutions(int value) override;
 
   bool ReadParameterFile(const std::string& filename) override;
   std::string ValidFileExtensionForParameterFile() const override;
@@ -657,6 +658,10 @@ void SCIPInterface::SetLpAlgorithm(int value) {
                                         value);
     }
   }
+}
+
+void SCIPInterface::SetMaximumSolutions(int value) {
+  SetUnsupportedIntegerParam(MPSolverParameters::MAXIMUM_SOLUTIONS);
 }
 
 bool SCIPInterface::ReadParameterFile(const std::string& filename) {

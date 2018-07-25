@@ -1018,7 +1018,9 @@ class MPSolverParameters {
     // Advanced usage: incrementality from one solve to the next.
     INCREMENTALITY = 1002,
     // Advanced usage: enable or disable matrix scaling.
-    SCALING = 1003
+    SCALING = 1003,
+    // The maximum number of solutions to inspect before returning
+    MAXIMUM_SOLUTIONS = 1004
   };
 
   // For each categorical parameter, enumeration of possible values.
@@ -1105,6 +1107,7 @@ class MPSolverParameters {
   double relative_mip_gap_value_;
   double primal_tolerance_value_;
   double dual_tolerance_value_;
+  int max_sols_;
   int presolve_value_;
   int scaling_value_;
   int lp_algorithm_value_;
@@ -1368,6 +1371,7 @@ class MPSolverInterface {
   virtual void SetRelativeMipGap(double value) = 0;
   virtual void SetPrimalTolerance(double value) = 0;
   virtual void SetDualTolerance(double value) = 0;
+  virtual void SetMaximumSolutions(int value) = 0;
   virtual void SetPresolveMode(int value) = 0;
 
   // Pass solver specific parameters in text format. The format is

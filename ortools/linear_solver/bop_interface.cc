@@ -103,6 +103,7 @@ class BopInterface : public MPSolverInterface {
   void SetPresolveMode(int value) override;
   void SetScalingMode(int value) override;
   void SetLpAlgorithm(int value) override;
+  void SetMaximumSolutions(int value) override;
   bool SetSolverSpecificParametersAsString(
       const std::string& parameters) override;
 
@@ -362,6 +363,11 @@ void BopInterface::SetDualTolerance(double value) {}
 void BopInterface::SetScalingMode(int value) {}
 void BopInterface::SetLpAlgorithm(int value) {}
 void BopInterface::SetRelativeMipGap(double value) {}
+
+
+void BopInterface::SetMaximumSolutions(int value) {
+  SetUnsupportedIntegerParam(MPSolverParameters::MAXIMUM_SOLUTIONS);
+}
 
 void BopInterface::SetPresolveMode(int value) {
   switch (value) {

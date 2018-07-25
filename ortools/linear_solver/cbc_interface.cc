@@ -134,6 +134,7 @@ class CBCInterface : public MPSolverInterface {
   // Set all parameters in the underlying solver.
   void SetParameters(const MPSolverParameters& param) override;
   // Set each parameter in the underlying solver.
+  void SetMaximumSolutions(int value) override;
   void SetRelativeMipGap(double value) override;
   void SetPrimalTolerance(double value) override;
   void SetDualTolerance(double value) override;
@@ -145,6 +146,7 @@ class CBCInterface : public MPSolverInterface {
   // TODO(user): remove and query number of iterations directly from CbcModel
   int64 iterations_;
   int64 nodes_;
+  int max_sols_;
   double best_objective_bound_;
   // Special way to handle the relative MIP gap parameter.
   double relative_mip_gap_;
@@ -373,6 +375,9 @@ MPSolver::ResultStatus CBCInterface::Solve(const MPSolverParameters& param) {
   // Always turn presolve on (it's the CBC default and it consistently
   // improves performance).
   model.setTypePresolve(0);
+  if (max_sols_ > 0) {
+    model.setMaximumSolutions(max_sols_);
+  }
   // Special way to set the relative MIP gap parameter as it cannot be set
   // through callCbc.
   model.setAllowableFractionGap(relative_mip_gap_);
@@ -507,6 +512,10 @@ void CBCInterface::SetDualTolerance(double value) {
   if (value != MPSolverParameters::kDefaultDualTolerance) {
     SetUnsupportedDoubleParam(MPSolverParameters::DUAL_TOLERANCE);
   }
+}
+
+void CBCInterface::SetMaximumSolutions(int value) {
+  max_sols_ = value;
 }
 
 void CBCInterface::SetPresolveMode(int value) {
