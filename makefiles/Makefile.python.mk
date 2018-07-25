@@ -3,10 +3,10 @@
 help_python:
 	@echo Use one of the following Python targets:
 ifeq ($(SYSTEM),win)
-	@tools\grep.exe "^.PHONY: .* #" $(CURDIR)/makefiles/Makefile.python.mk | tools\sed.exe "s/\.PHONY: \(.*\) # \(.*\)/\1\t\2/"
+	@$(GREP) "^.PHONY: .* #" $(CURDIR)/makefiles/Makefile.python.mk | $(SED) "s/\.PHONY: \(.*\) # \(.*\)/\1\t\2/"
 	@echo off & echo(
 else
-	@grep "^.PHONY: .* #" $(CURDIR)/makefiles/Makefile.python.mk | sed "s/\.PHONY: \(.*\) # \(.*\)/\1\t\2/" | expand -t24
+	@$(GREP) "^.PHONY: .* #" $(CURDIR)/makefiles/Makefile.python.mk | $(SED) "s/\.PHONY: \(.*\) # \(.*\)/\1\t\2/" | expand -t24
 	@echo
 endif
 
@@ -524,8 +524,8 @@ python_examples_archive:
 	$(COPY) tools$SREADME.examples.python temp$Sortools_examples$SREADME.txt
 	$(COPY) LICENSE-2.0.txt temp$Sortools_examples
 ifeq ($(SYSTEM),win)
-	cd temp\ortools_examples && ..\..\tools\tar.exe -C ..\.. -c -v --exclude *svn* --exclude *roadef* --exclude *vector_packing* examples\data | ..\..\tools\tar.exe xvm
-	cd temp && ..\tools\zip.exe -r ..\or-tools_python_examples_v$(OR_TOOLS_VERSION).zip ortools_examples
+	cd temp\ortools_examples && ..\..\$(TAR) -C ..\.. -c -v --exclude *svn* --exclude *roadef* --exclude *vector_packing* examples\data | ..\..\$(TAR) xvm
+	cd temp && ..\$(ZIP) -r ..\or-tools_python_examples_v$(OR_TOOLS_VERSION).zip ortools_examples
 else
 	cd temp/ortools_examples && tar -C ../.. -c -v --exclude *svn* --exclude *roadef* --exclude *vector_packing* examples/data | tar xvm
 	cd temp && tar -c -v -z --no-same-owner -f ../or-tools_python_examples$(PYPI_OS)_v$(OR_TOOLS_VERSION).tar.gz ortools_examples
@@ -535,6 +535,12 @@ endif
 ##  Pypi artifact  ##
 #####################
 PYPI_ARCHIVE_TEMP_DIR = temp-python$(PYTHON_VERSION)
+
+# PEP 513 auditwheel repair overwrite rpath to $ORIGIN/<ortools_root>/.libs
+# We need to copy all dynamic libs here
+ifneq ($(SYSTEM),win)
+PYPI_ARCHIVE_LIBS = $(PYPI_ARCHIVE_TEMP_DIR)/ortools/ortools/.libs
+endif
 
 MISSING_PYPI_FILES = \
  $(PYPI_ARCHIVE_TEMP_DIR)/ortools/setup.py \
@@ -547,7 +553,8 @@ MISSING_PYPI_FILES = \
  $(PYPI_ARCHIVE_TEMP_DIR)/ortools/ortools/linear_solver \
  $(PYPI_ARCHIVE_TEMP_DIR)/ortools/ortools/sat \
  $(PYPI_ARCHIVE_TEMP_DIR)/ortools/ortools/data \
- $(PYPI_ARCHIVE_TEMP_DIR)/ortools/ortools/util
+ $(PYPI_ARCHIVE_TEMP_DIR)/ortools/ortools/util \
+ $(PYPI_ARCHIVE_LIBS)
 
 $(PYPI_ARCHIVE_TEMP_DIR):
 	$(MKDIR) $(PYPI_ARCHIVE_TEMP_DIR)
@@ -696,26 +703,30 @@ $(PYPI_ARCHIVE_TEMP_DIR)/ortools/ortools/util: | $(PYPI_ARCHIVE_TEMP_DIR)/ortool
 	$(TOUCH) $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools$Sutil$S__init__.py
 	$(COPY) $(GEN_PATH)$Sortools$Sutil$S*.py $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools$Sutil
 
+$(PYPI_ARCHIVE_TEMP_DIR)/ortools/ortools/.libs: | $(PYPI_ARCHIVE_TEMP_DIR)/ortools/ortools
+	-$(DELREC) $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools$S.libs
+	$(MKDIR) $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools$S.libs
+
 .PHONY: pypi_archive # Create Python "ortools" wheel package
 pypi_archive: python $(MISSING_PYPI_FILES)
 ifneq ($(SYSTEM),win)
-	cp $(OR_TOOLS_LIBS) $(PYPI_ARCHIVE_TEMP_DIR)/ortools/ortools
+	cp $(OR_TOOLS_LIBS) $(PYPI_ARCHIVE_TEMP_DIR)/ortools/ortools/.libs
 endif
 ifeq ($(UNIX_GFLAGS_DIR),$(OR_TOOLS_TOP)/dependencies/install)
-	$(COPYREC) dependencies$Sinstall$Slib$Slibgflags* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools
+	$(COPYREC) dependencies$Sinstall$Slib$Slibgflags* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools$S.libs
 endif
 ifeq ($(UNIX_GLOG_DIR),$(OR_TOOLS_TOP)/dependencies/install)
-	$(COPYREC) dependencies$Sinstall$Slib$Slibglog* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools
+	$(COPYREC) dependencies$Sinstall$Slib$Slibglog* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools$S.libs
 endif
 ifeq ($(UNIX_PROTOBUF_DIR),$(OR_TOOLS_TOP)/dependencies/install)
-	$(COPYREC) dependencies$Sinstall$Slib$Slibproto* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools
+	$(COPYREC) $(subst /,$S,$(_PROTOBUF_LIB_DIR))$Slibproto* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools$S.libs
 endif
 ifeq ($(UNIX_CBC_DIR),$(OR_TOOLS_TOP)/dependencies/install)
-	$(COPYREC) dependencies$Sinstall$Slib$SlibCbc* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools
-	$(COPYREC) dependencies$Sinstall$Slib$SlibCgl* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools
-	$(COPYREC) dependencies$Sinstall$Slib$SlibClp* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools
-	$(COPYREC) dependencies$Sinstall$Slib$SlibOsi* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools
-	$(COPYREC) dependencies$Sinstall$Slib$SlibCoinUtils* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools
+	$(COPYREC) dependencies$Sinstall$Slib$SlibCbc* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools$S.libs
+	$(COPYREC) dependencies$Sinstall$Slib$SlibCgl* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools$S.libs
+	$(COPYREC) dependencies$Sinstall$Slib$SlibClp* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools$S.libs
+	$(COPYREC) dependencies$Sinstall$Slib$SlibOsi* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools$S.libs
+	$(COPYREC) dependencies$Sinstall$Slib$SlibCoinUtils* $(PYPI_ARCHIVE_TEMP_DIR)$Sortools$Sortools$S.libs
 endif
 	cd $(PYPI_ARCHIVE_TEMP_DIR)$Sortools && "$(PYTHON_EXECUTABLE)" setup.py bdist_wheel
 ifeq ($(SYSTEM),win)
@@ -730,7 +741,7 @@ install_python: pypi_archive
 uninstall_python:
 	"$(PYTHON_EXECUTABLE)" -m pip uninstall ortools
 
-pypi_upload: pypi_archive
+pypi_upload: pypi_archive # Upload Wheel package to Pypi.org
 	@echo Uploading Pypi module for "$(PYTHON_EXECUTABLE)".
 	cd $(PYPI_ARCHIVE_TEMP_DIR)/ortools && twine upload dist/*
 

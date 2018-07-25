@@ -1776,6 +1776,22 @@ void TryToLinearizeConstraint(
       lc.AddTerm(m->Integer(var), -1.0);
       linear_constraints->push_back(lc.Build());
     }
+  } else if (ct.constraint_case() ==
+             ConstraintProto::ConstraintCase::kIntProd) {
+    if (HasEnforcementLiteral(ct)) return;
+    const int target = ct.int_prod().target();
+    const int size = ct.int_prod().vars_size();
+
+    // We just linearize x = y^2 by x >= y which is far from ideal but at
+    // least pushes x when y moves away from zero. Note that if y is negative,
+    // we should probably also add x >= -y, but then this do not happen in
+    // our test set.
+    if (size == 2 && ct.int_prod().vars(0) == ct.int_prod().vars(1)) {
+      LinearConstraintBuilder lc(m->model(), -kInfinity, 0.0);
+      lc.AddTerm(m->Integer(ct.int_prod().vars(0)), 1.0);
+      lc.AddTerm(m->Integer(target), -1.0);
+      linear_constraints->push_back(lc.Build());
+    }
   } else if (ct.constraint_case() == ConstraintProto::ConstraintCase::kLinear) {
     // Note that we ignore the holes in the domain.
     //
@@ -3119,29 +3135,25 @@ CpSolverResponse SolveCpModelParallel(
         [maximize, &num_solutions, worker_id, worker_name, &mutex,
          &best_response, &observer, &timer,
          &first_solution_found_or_search_finished](const CpSolverResponse& r) {
-          bool should_notify = false;
-          {
-            absl::MutexLock lock(&mutex);
+          absl::MutexLock lock(&mutex);
 
-            // Check is the new solution is actually improving upon the best
-            // solution found so far.
-            if (MergeOptimizationSolution(r, maximize, &best_response)) {
-              if (!first_solution_found_or_search_finished.HasBeenNotified()) {
-                should_notify = true;
-              }
-              VLOG(1) << absl::StrFormat(
-                  "#%-5i %-6s %8.2fs  obj:[%0.0f,%0.0f] %s", num_solutions++,
-                  worker_name.c_str(), timer.Get(),
-                  maximize ? best_response.objective_value()
-                           : best_response.best_objective_bound(),
-                  maximize ? best_response.best_objective_bound()
-                           : best_response.objective_value(),
-                  r.solution_info().c_str());
-              observer(best_response);
+          // Check is the new solution is actually improving upon the best
+          // solution found so far.
+          if (MergeOptimizationSolution(r, maximize, &best_response)) {
+            VLOG(1) << absl::StrFormat(
+                "#%-5i %-6s %8.2fs  obj:[%0.0f,%0.0f] %s", num_solutions++,
+                worker_name.c_str(), timer.Get(),
+                maximize ? best_response.objective_value()
+                         : best_response.best_objective_bound(),
+                maximize ? best_response.best_objective_bound()
+                         : best_response.objective_value(),
+                r.solution_info().c_str());
+            observer(best_response);
+            // We have potentially displayed the improving solution, and updated
+            // the best_response. We can awaken sleeping LNS threads.
+            if (!first_solution_found_or_search_finished.HasBeenNotified()) {
+              first_solution_found_or_search_finished.Notify();
             }
-          }
-          if (should_notify) {
-            first_solution_found_or_search_finished.Notify();
           }
         };
 
@@ -3188,9 +3200,9 @@ CpSolverResponse SolveCpModelParallel(
         // the time limit is reached or when the problem is solved, so we just
         // abort all other threads and return.
         *stopped = true;
-      }
-      if (!first_solution_found_or_search_finished.HasBeenNotified()) {
-        first_solution_found_or_search_finished.Notify();
+        if (!first_solution_found_or_search_finished.HasBeenNotified()) {
+          first_solution_found_or_search_finished.Notify();
+        }
       }
     });
   }
@@ -3314,8 +3326,11 @@ CpSolverResponse SolveCpModel(const CpModelProto& model_proto, Model* model) {
       };
 
   CpSolverResponse response;
+#if defined(__PORTABLE_PLATFORM__)
+  if (/* DISABLES CODE */ (false)) {
+    // We ignore the multithreading parameter in this case.
+#else   // __PORTABLE_PLATFORM__
   if (params.num_search_workers() > 1) {
-#if !defined(__PORTABLE_PLATFORM__)
     response = SolveCpModelParallel(new_model, observer_function, model);
 #endif  // __PORTABLE_PLATFORM__
   } else if (params.use_lns() && new_model.has_objective() &&

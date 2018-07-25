@@ -897,6 +897,7 @@ $(OBJ_DIR)/lp_data/lp_decomposer.$O: \
  $(SRC_DIR)/ortools/lp_data/lp_decomposer.cc \
  $(SRC_DIR)/ortools/algorithms/dynamic_partition.h \
  $(SRC_DIR)/ortools/base/mutex.h \
+ $(GEN_DIR)/ortools/glop/parameters.pb.h \
  $(SRC_DIR)/ortools/lp_data/lp_data.h \
  $(SRC_DIR)/ortools/lp_data/lp_decomposer.h \
  $(SRC_DIR)/ortools/lp_data/lp_types.h \
@@ -979,6 +980,7 @@ $(SRC_DIR)/ortools/lp_data/model_reader.cc: ;
 $(OBJ_DIR)/lp_data/model_reader.$O: \
  $(SRC_DIR)/ortools/lp_data/model_reader.cc \
  $(SRC_DIR)/ortools/base/file.h \
+ $(GEN_DIR)/ortools/glop/parameters.pb.h \
  $(GEN_DIR)/ortools/linear_solver/linear_solver.pb.h \
  $(SRC_DIR)/ortools/lp_data/lp_data.h \
  $(SRC_DIR)/ortools/lp_data/model_reader.h \
@@ -1007,6 +1009,7 @@ $(OBJ_DIR)/lp_data/mps_reader.$O: \
  $(SRC_DIR)/ortools/base/status.h \
  $(SRC_DIR)/ortools/base/stringprintf.h \
  $(SRC_DIR)/ortools/base/strutil.h \
+ $(GEN_DIR)/ortools/glop/parameters.pb.h \
  $(SRC_DIR)/ortools/lp_data/lp_data.h \
  $(SRC_DIR)/ortools/lp_data/lp_print_utils.h \
  $(SRC_DIR)/ortools/lp_data/lp_types.h \
@@ -1018,6 +1021,7 @@ $(SRC_DIR)/ortools/lp_data/proto_utils.cc: ;
 
 $(OBJ_DIR)/lp_data/proto_utils.$O: \
  $(SRC_DIR)/ortools/lp_data/proto_utils.cc \
+ $(GEN_DIR)/ortools/glop/parameters.pb.h \
  $(GEN_DIR)/ortools/linear_solver/linear_solver.pb.h \
  $(SRC_DIR)/ortools/lp_data/lp_data.h \
  $(SRC_DIR)/ortools/lp_data/proto_utils.h \
@@ -1748,6 +1752,7 @@ SAT_DEPS = \
  $(SRC_DIR)/ortools/sat/cp_model_presolve.h \
  $(SRC_DIR)/ortools/sat/cp_model_search.h \
  $(SRC_DIR)/ortools/sat/cp_model_solver.h \
+ $(SRC_DIR)/ortools/sat/cp_model_symmetries.h \
  $(SRC_DIR)/ortools/sat/cp_model_utils.h \
  $(SRC_DIR)/ortools/sat/cumulative.h \
  $(SRC_DIR)/ortools/sat/disjunctive.h \
@@ -1797,6 +1802,7 @@ SAT_LIB_OBJS = \
  $(OBJ_DIR)/sat/cp_model_presolve.$O \
  $(OBJ_DIR)/sat/cp_model_search.$O \
  $(OBJ_DIR)/sat/cp_model_solver.$O \
+ $(OBJ_DIR)/sat/cp_model_symmetries.$O \
  $(OBJ_DIR)/sat/cp_model_utils.$O \
  $(OBJ_DIR)/sat/cumulative.$O \
  $(OBJ_DIR)/sat/disjunctive.$O \
@@ -1852,6 +1858,8 @@ $(SRC_DIR)/ortools/sat/cp_model_presolve.h: ;
 $(SRC_DIR)/ortools/sat/cp_model_search.h: ;
 
 $(SRC_DIR)/ortools/sat/cp_model_solver.h: ;
+
+$(SRC_DIR)/ortools/sat/cp_model_symmetries.h: ;
 
 $(SRC_DIR)/ortools/sat/cp_model_utils.h: ;
 
@@ -2199,6 +2207,23 @@ $(OBJ_DIR)/sat/cp_model_solver.$O: \
  $(GEN_DIR)/ortools/sat/cp_model.pb.h \
  $(GEN_DIR)/ortools/sat/sat_parameters.pb.h | $(OBJ_DIR)/sat
 	$(CCC) $(CFLAGS) -c $(SRC_DIR)$Sortools$Ssat$Scp_model_solver.cc $(OBJ_OUT)$(OBJ_DIR)$Ssat$Scp_model_solver.$O
+
+$(SRC_DIR)/ortools/sat/cp_model_symmetries.cc: ;
+
+$(OBJ_DIR)/sat/cp_model_symmetries.$O: \
+ $(SRC_DIR)/ortools/sat/cp_model_symmetries.cc \
+ $(SRC_DIR)/ortools/algorithms/find_graph_symmetries.h \
+ $(SRC_DIR)/ortools/algorithms/sparse_permutation.h \
+ $(SRC_DIR)/ortools/base/hash.h \
+ $(SRC_DIR)/ortools/base/map_util.h \
+ $(SRC_DIR)/ortools/base/memory.h \
+ $(GEN_DIR)/ortools/sat/cp_model.pb.h \
+ $(SRC_DIR)/ortools/sat/cp_model_symmetries.h \
+ $(SRC_DIR)/ortools/sat/cp_model_utils.h \
+ $(GEN_DIR)/ortools/sat/boolean_problem.pb.h \
+ $(GEN_DIR)/ortools/sat/cp_model.pb.h \
+ $(GEN_DIR)/ortools/sat/sat_parameters.pb.h | $(OBJ_DIR)/sat
+	$(CCC) $(CFLAGS) -c $(SRC_DIR)$Sortools$Ssat$Scp_model_symmetries.cc $(OBJ_OUT)$(OBJ_DIR)$Ssat$Scp_model_symmetries.$O
 
 $(SRC_DIR)/ortools/sat/cp_model_utils.cc: ;
 
@@ -3294,14 +3319,17 @@ $(OBJ_DIR)/linear_solver/linear_solver.$O: \
  $(SRC_DIR)/ortools/base/accurate_sum.h \
  $(SRC_DIR)/ortools/base/canonical_errors.h \
  $(SRC_DIR)/ortools/base/commandlineflags.h \
- $(SRC_DIR)/ortools/base/hash.h \
  $(SRC_DIR)/ortools/base/integral_types.h \
  $(SRC_DIR)/ortools/base/join.h \
  $(SRC_DIR)/ortools/base/logging.h \
+ $(SRC_DIR)/ortools/base/macros.h \
  $(SRC_DIR)/ortools/base/map_util.h \
+ $(SRC_DIR)/ortools/base/mutex.h \
+ $(SRC_DIR)/ortools/base/port.h \
  $(SRC_DIR)/ortools/base/status.h \
  $(SRC_DIR)/ortools/base/stl_util.h \
  $(SRC_DIR)/ortools/base/stringprintf.h \
+ $(SRC_DIR)/ortools/base/strutil.h \
  $(SRC_DIR)/ortools/base/timer.h \
  $(GEN_DIR)/ortools/glop/parameters.pb.h \
  $(SRC_DIR)/ortools/linear_solver/linear_expr.h \

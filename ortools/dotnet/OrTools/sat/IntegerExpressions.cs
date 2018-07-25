@@ -25,6 +25,22 @@ public static class IntVarArrayHelper
   {
     return new SumArray(vars);
   }
+  public static SumArray ScalProd(this IntVar[] vars, int[] coeffs)
+  {
+    IntegerExpression[] exprs = new IntegerExpression[vars.Length];
+    for (int i = 0; i < vars.Length; ++i) {
+      exprs[i] = vars[i] * coeffs[i];
+    }
+    return new SumArray(exprs);
+  }
+  public static SumArray ScalProd(this IntVar[] vars, long[] coeffs)
+  {
+    IntegerExpression[] exprs = new IntegerExpression[vars.Length];
+    for (int i = 0; i < vars.Length; ++i) {
+      exprs[i] = vars[i] * coeffs[i];
+    }
+    return new SumArray(exprs);
+  }
 }
 
 public interface ILiteral
@@ -429,6 +445,11 @@ public class IntVar : IntegerExpression, ILiteral
     {
       return var_.ToString();
     }
+  }
+
+  public string Name()
+  {
+    return var_.Name;
   }
 
   public ILiteral Not()

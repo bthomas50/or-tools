@@ -104,6 +104,7 @@ class BopInterface : public MPSolverInterface {
   void SetPresolveMode(int value) override;
   void SetScalingMode(int value) override;
   void SetLpAlgorithm(int value) override;
+  void SetMaximumSolutions(int value) override;
   bool SetSolverSpecificParametersAsString(
       const std::string& parameters) override;
 
@@ -331,7 +332,7 @@ void BopInterface::ExtractNewConstraints() {
     DCHECK_EQ(new_row, row);
     linear_program_.SetConstraintBounds(row, lb, ub);
 
-    for (CoeffEntry entry : ct->coefficients_) {
+    for (const auto& entry : ct->coefficients_) {
       const int var_index = entry.first->index();
       DCHECK(variable_is_extracted(var_index));
       const glop::ColIndex col(var_index);
@@ -344,7 +345,7 @@ void BopInterface::ExtractNewConstraints() {
 // TODO(user): remove duplication with GlopInterface.
 void BopInterface::ExtractObjective() {
   linear_program_.SetObjectiveOffset(solver_->Objective().offset());
-  for (CoeffEntry entry : solver_->objective_->coefficients_) {
+  for (const auto& entry : solver_->objective_->coefficients_) {
     const int var_index = entry.first->index();
     const glop::ColIndex col(var_index);
     const double coeff = entry.second;
@@ -363,6 +364,11 @@ void BopInterface::SetDualTolerance(double value) {}
 void BopInterface::SetScalingMode(int value) {}
 void BopInterface::SetLpAlgorithm(int value) {}
 void BopInterface::SetRelativeMipGap(double value) {}
+
+
+void BopInterface::SetMaximumSolutions(int value) {
+  SetUnsupportedIntegerParam(MPSolverParameters::MAXIMUM_SOLUTIONS);
+}
 
 void BopInterface::SetPresolveMode(int value) {
   switch (value) {

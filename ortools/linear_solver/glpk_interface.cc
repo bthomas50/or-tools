@@ -181,6 +181,7 @@ class GLPKInterface : public MPSolverInterface {
   void SetPresolveMode(int value) override;
   void SetScalingMode(int value) override;
   void SetLpAlgorithm(int value) override;
+  void SetMaximumSolutions(int value) override;
 
   void ExtractOldConstraints();
   void ExtractOneConstraint(MPConstraint* const constraint, int* const indices,
@@ -357,7 +358,7 @@ void GLPKInterface::SetObjectiveOffset(double value) {
 // Clear objective of all its terms (linear)
 void GLPKInterface::ClearObjective() {
   InvalidateSolutionSynchronization();
-  for (CoeffEntry entry : solver_->objective_->coefficients_) {
+  for (const auto& entry : solver_->objective_->coefficients_) {
     const int mpsolver_var_index = entry.first->index();
     // Variable may have not been extracted yet.
     if (!variable_is_extracted(mpsolver_var_index)) {
@@ -432,7 +433,7 @@ void GLPKInterface::ExtractOneConstraint(MPConstraint* const constraint,
                                          double* const coefs) {
   // GLPK convention is to start indexing at 1.
   int k = 1;
-  for (CoeffEntry entry : constraint->coefficients_) {
+  for (const auto& entry : constraint->coefficients_) {
     DCHECK(variable_is_extracted(entry.first->index()));
     indices[k] = MPSolverIndexToGlpkIndex(entry.first->index());
     coefs[k] = entry.second;
@@ -477,7 +478,7 @@ void GLPKInterface::ExtractNewConstraints() {
       int k = 1;
       for (int i = 0; i < solver_->constraints_.size(); ++i) {
         MPConstraint* ct = solver_->constraints_[i];
-        for (CoeffEntry entry : ct->coefficients_) {
+        for (const auto& entry : ct->coefficients_) {
           DCHECK(variable_is_extracted(entry.first->index()));
           constraint_indices[k] = MPSolverIndexToGlpkIndex(ct->index());
           variable_indices[k] = MPSolverIndexToGlpkIndex(entry.first->index());
@@ -507,7 +508,7 @@ void GLPKInterface::ExtractNewConstraints() {
 void GLPKInterface::ExtractObjective() {
   // Linear objective: set objective coefficients for all variables
   // (some might have been modified).
-  for (CoeffEntry entry : solver_->objective_->coefficients_) {
+  for (const auto& entry : solver_->objective_->coefficients_) {
     glp_set_obj_coef(lp_, MPSolverIndexToGlpkIndex(entry.first->index()),
                      entry.second);
   }
@@ -987,6 +988,10 @@ void GLPKInterface::SetLpAlgorithm(int value) {
                                         value);
     }
   }
+}
+
+void GLPKInterface::SetMaximumSolutions(int value) {
+  SetUnsupportedIntegerParam(MPSolverParameters::MAXIMUM_SOLUTIONS);
 }
 
 MPSolverInterface* BuildGLPKInterface(bool mip, MPSolver* const solver) {

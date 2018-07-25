@@ -367,9 +367,12 @@ bool MergeOptimizationSolution(const CpSolverResponse& response, bool maximize,
         best->set_best_objective_bound(new_best_objective_bound);
         return true;
       }
-      // The new solution can have a worse objective value, but a better
-      // best_objective_bound.
-      best->set_best_objective_bound(new_best_objective_bound);
+      if (new_best_objective_bound != previous_best_bound) {
+        // The new solution has a worse objective value, but a better
+        // best_objective_bound.
+        best->set_best_objective_bound(new_best_objective_bound);
+        return true;
+      }
       return false;
     }
     case CpSolverStatus::INFEASIBLE: {

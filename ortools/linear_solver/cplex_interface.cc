@@ -1039,6 +1039,10 @@ void CplexInterface::SetPresolveMode(int value) {
   SetIntegerParamToUnsupportedValue(MPSolverParameters::PRESOLVE, value);
 }
 
+void CplexInterface::SetMaximumSolutions(int value) {
+  SetUnsupportedIntegerParam(MPSolverParameters::MAXIMUM_SOLUTIONS);
+}
+
 // Sets the scaling mode.
 void CplexInterface::SetScalingMode(int value) {
   MPSolverParameters::ScalingValues const scaling =

@@ -21,15 +21,20 @@ or-tools*.zip
 *.ass
 *.swp
 
+build.log
 bin/
 ortools/gen/
 objs/
-temp/
+classes/
+temp_test/
 temp_fz/
 temp_fz_test/
 temp-python*
 temp_dotnet/
 temp_dotnet_test/
+temp_archive/
+temp_fz_archive/
+temp/ortools_examples
 lib/
 install/
 examples/csharp/solution/*.csproj
@@ -80,9 +85,6 @@ cache/
 **/.vscode/*
 .DS_Store
 
-tools/netstandard/CreateSigningKey/bin
-tools/netstandard/CreateSigningKey/obj
-
 **/.vs/*
 **/dotnet-test/*
 
@@ -92,7 +94,17 @@ ortools/fsharp/**/bin
 ortools/fsharp/**/obj
 ortools/fsharp/**/packages
 
+examples/dotnet/**/bin
+examples/dotnet/**/obj
+
+ortools/dotnet/OrTools/*.csproj
+ortools/dotnet/OrTools.FSharp/*.fsproj
+ortools/dotnet/*.nuspec
 ortools/dotnet/**/bin
 ortools/dotnet/**/obj
 ortools/dotnet/**/packages
+
+tools/dotnet/CreateSigningKey/bin
+tools/dotnet/CreateSigningKey/obj
+
 *.userprefs
