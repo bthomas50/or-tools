@@ -2,8 +2,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Force dependencies to be built as static
-set(BUILD_SHARED_BCKP ${BUILD_SHARED_LIBS})
-set(BUILD_SHARED_LIBS OFF)
+# set(BUILD_SHARED_BCKP ${BUILD_SHARED_LIBS})
+# set(BUILD_SHARED_LIBS OFF)
 
 # Disable test rules for dependencies
 set(BUILD_TESTING OFF)
@@ -193,4 +193,4 @@ if(NOT TARGET Cbc::CbcSolver OR NOT TARGET Cbc::ClpSolver)
 endif()
 
 # Reapply previous state
-set(BUILD_SHARED_LIBS ${BUILD_SHARED_BCKP})
+# set(BUILD_SHARED_LIBS ${BUILD_SHARED_BCKP})
