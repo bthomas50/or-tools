@@ -153,6 +153,7 @@ class GurobiInterface : public MPSolverInterface {
   void SetPresolveMode(int value) override;
   void SetScalingMode(int value) override;
   void SetLpAlgorithm(int value) override;
+  void SetMaximumSolutions(int value) override;
 
   bool ReadParameterFile(const std::string& filename) override;
   std::string ValidFileExtensionForParameterFile() const override;
@@ -617,6 +618,10 @@ void GurobiInterface::SetLpAlgorithm(int value) {
       SetIntegerParamToUnsupportedValue(MPSolverParameters::LP_ALGORITHM,
                                         value);
   }
+}
+
+void GurobiInterface::SetMaximumSolutions(int value) {
+  SetUnsupportedIntegerParam(MPSolverParameters::MAXIMUM_SOLUTIONS);
 }
 
 MPSolver::ResultStatus GurobiInterface::Solve(const MPSolverParameters& param) {

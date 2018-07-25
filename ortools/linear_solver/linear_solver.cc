@@ -1419,6 +1419,7 @@ void MPSolverInterface::SetMIPParameters(const MPSolverParameters& param) {
 #if defined(USE_GLOP)
   }
 #endif
+  SetMaximumSolutions(param.GetIntegerParam(MPSolverParameters::MAXIMUM_SOLUTIONS));
 }
 
 void MPSolverInterface::SetUnsupportedDoubleParam(
@@ -1524,6 +1525,7 @@ MPSolverParameters::MPSolverParameters()
       scaling_value_(kDefaultIntegerParamValue),
       lp_algorithm_value_(kDefaultIntegerParamValue),
       incrementality_value_(kDefaultIncrementality),
+      max_sols_(-1),
       lp_algorithm_is_default_(true) {}
 
 void MPSolverParameters::SetDoubleParam(MPSolverParameters::DoubleParam param,
@@ -1583,6 +1585,9 @@ void MPSolverParameters::SetIntegerParam(MPSolverParameters::IntegerParam param,
       incrementality_value_ = value;
       break;
     }
+    case MAXIMUM_SOLUTIONS:
+      max_sols_ = value;
+      break;
     default: {
       LOG(ERROR) << "Trying to set an unknown parameter: " << param << ".";
     }
@@ -1629,6 +1634,9 @@ void MPSolverParameters::ResetIntegerParam(
       incrementality_value_ = kDefaultIncrementality;
       break;
     }
+    case MAXIMUM_SOLUTIONS:
+      max_sols_ = -1;
+      break;
     default: {
       LOG(ERROR) << "Trying to reset an unknown parameter: " << param << ".";
     }
@@ -1643,6 +1651,7 @@ void MPSolverParameters::Reset() {
   ResetIntegerParam(SCALING);
   ResetIntegerParam(LP_ALGORITHM);
   ResetIntegerParam(INCREMENTALITY);
+  ResetIntegerParam(MAXIMUM_SOLUTIONS);
 }
 
 double MPSolverParameters::GetDoubleParam(MPSolverParameters::DoubleParam param)
@@ -1668,6 +1677,7 @@ int MPSolverParameters::GetIntegerParam(MPSolverParameters::IntegerParam param)
     }
     case INCREMENTALITY: { return incrementality_value_; }
     case SCALING: { return scaling_value_; }
+    case MAXIMUM_SOLUTIONS: { return max_sols_; }
     default: {
       LOG(ERROR) << "Trying to get an unknown parameter: " << param << ".";
       return kUnknownIntegerParamValue;

@@ -1167,6 +1167,10 @@ namespace operations_research {
       }
    }
 
+   void CplexInterface::SetMaximumSolutions(int value) {
+     SetUnsupportedIntegerParam(MPSolverParameters::MAXIMUM_SOLUTIONS);
+   }
+   
    bool CplexInterface::ReadParameterFile(std::string const &filename)
    {
       // Return true on success and false on error.
