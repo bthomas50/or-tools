@@ -183,7 +183,7 @@ BopOptimizerBase::Status GuidedSatFirstSolutionGenerator::Optimize(
   time_limit->AdvanceDeterministicTime(sat_solver_->deterministic_time() -
                                        initial_deterministic_time);
 
-  if (sat_status == sat::SatSolver::MODEL_UNSAT) {
+  if (sat_status == sat::SatSolver::INFEASIBLE) {
     if (policy_ != Policy::kNotGuided) abort_ = true;
     if (problem_state.upper_bound() != kint64max) {
       // As the solution in the state problem is feasible, it is proved optimal.
@@ -195,7 +195,7 @@ BopOptimizerBase::Status GuidedSatFirstSolutionGenerator::Optimize(
   }
 
   ExtractLearnedInfoFromSatSolver(sat_solver_.get(), learned_info);
-  if (sat_status == sat::SatSolver::MODEL_SAT) {
+  if (sat_status == sat::SatSolver::FEASIBLE) {
     SatAssignmentToBopSolution(sat_solver_->Assignment(),
                                &learned_info->solution);
     return SolutionStatus(learned_info->solution, problem_state.lower_bound());
@@ -212,8 +212,7 @@ BopRandomFirstSolutionGenerator::BopRandomFirstSolutionGenerator(
     sat::SatSolver* sat_propagator, MTRandom* random)
     : BopOptimizerBase(name),
       random_(random),
-      sat_propagator_(sat_propagator),
-      sat_seed_(parameters.random_seed()) {}
+      sat_propagator_(sat_propagator) {}
 
 BopRandomFirstSolutionGenerator::~BopRandomFirstSolutionGenerator() {}
 
@@ -249,14 +248,12 @@ BopOptimizerBase::Status BopRandomFirstSolutionGenerator::Optimize(
 
   bool solution_found = false;
   while (remaining_num_conflicts > 0 && !time_limit->LimitReached()) {
-    ++sat_seed_;
     sat_propagator_->Backtrack(0);
     old_num_failures = sat_propagator_->num_failures();
 
     sat::SatParameters sat_params = saved_params;
     sat::RandomizeDecisionHeuristic(random_, &sat_params);
     sat_params.set_max_number_of_conflicts(kMaxNumConflicts);
-    sat_params.set_random_seed(sat_seed_);
     sat_propagator_->SetParameters(sat_params);
     sat_propagator_->ResetDecisionHeuristic();
 
@@ -290,14 +287,14 @@ BopOptimizerBase::Status BopRandomFirstSolutionGenerator::Optimize(
 
     const sat::SatSolver::Status sat_status =
         sat_propagator_->SolveWithTimeLimit(time_limit);
-    if (sat_status == sat::SatSolver::MODEL_SAT) {
+    if (sat_status == sat::SatSolver::FEASIBLE) {
       objective_need_to_be_overconstrained = true;
       solution_found = true;
       SatAssignmentToBopSolution(sat_propagator_->Assignment(),
                                  &learned_info->solution);
       CHECK_LT(learned_info->solution.GetCost(), best_cost);
       best_cost = learned_info->solution.GetCost();
-    } else if (sat_status == sat::SatSolver::MODEL_UNSAT) {
+    } else if (sat_status == sat::SatSolver::INFEASIBLE) {
       // The solution is proved optimal (if any).
       learned_info->lower_bound = best_cost;
       return best_cost == kint64max ? BopOptimizerBase::INFEASIBLE

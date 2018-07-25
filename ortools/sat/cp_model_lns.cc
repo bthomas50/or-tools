@@ -13,6 +13,8 @@
 
 #include "ortools/sat/cp_model_lns.h"
 
+#include <numeric>
+
 #include <unordered_set>
 #include "ortools/sat/cp_model_utils.h"
 #include "ortools/util/random_engine.h"
@@ -20,50 +22,95 @@
 namespace operations_research {
 namespace sat {
 
-// Base class constructor.
-NeighborhoodGenerator::NeighborhoodGenerator(CpModelProto const* model)
+NeighborhoodGeneratorHelper::NeighborhoodGeneratorHelper(
+    CpModelProto const* model, bool focus_on_decision_variables)
     : model_proto_(*model) {
   var_to_constraint_.resize(model_proto_.variables_size());
   constraint_to_var_.resize(model_proto_.constraints_size());
   for (int ct_index = 0; ct_index < model_proto_.constraints_size();
        ++ct_index) {
     for (const int var : UsedVariables(model_proto_.constraints(ct_index))) {
+      if (IsConstant(var)) continue;
       var_to_constraint_[var].push_back(ct_index);
       constraint_to_var_[ct_index].push_back(var);
       CHECK_GE(var, 0);
       CHECK_LT(var, model_proto_.variables_size());
     }
   }
+  active_variables_set_.resize(model_proto_.variables_size(), false);
+
+  if (focus_on_decision_variables) {
+    for (const auto& search_strategy : model_proto_.search_strategy()) {
+      for (const int var : search_strategy.variables()) {
+        const int pos_var = PositiveRef(var);
+        if (!active_variables_set_[pos_var] && !IsConstant(pos_var)) {
+          active_variables_set_[pos_var] = true;
+          active_variables_.push_back(pos_var);
+        }
+      }
+    }
+    if (!active_variables_.empty()) {
+      // No decision variables, then no focus.
+      focus_on_decision_variables = false;
+    }
+  }
+  if (!focus_on_decision_variables) {  // Could have be set to false above.
+    for (int i = 0; i < model_proto_.variables_size(); ++i) {
+      if (!IsConstant(i)) {
+        active_variables_.push_back(i);
+        active_variables_set_[i] = true;
+      }
+    }
+  }
 }
 
-namespace {
+bool NeighborhoodGeneratorHelper::IsActive(int var) const {
+  return active_variables_set_[var];
+}
 
-// Returns a CpModelProto where the variables at given position where fixed to
-// the value they take in the given response.
-CpModelProto FixGivenPosition(const CpSolverResponse& response,
-                              const std::vector<int> variables_to_fix,
-                              CpModelProto model_proto) {
-  CHECK_EQ(response.solution_size(), model_proto.variables_size());
+bool NeighborhoodGeneratorHelper::IsConstant(int var) const {
+  return model_proto_.variables(var).domain_size() == 2 &&
+         model_proto_.variables(var).domain(0) ==
+             model_proto_.variables(var).domain(1);
+}
+
+CpModelProto NeighborhoodGeneratorHelper::FixGivenVariables(
+    const CpSolverResponse& initial_solution,
+    const std::vector<int>& variables_to_fix) const {
+  CpModelProto result = model_proto_;
+  CHECK_EQ(initial_solution.solution_size(), result.variables_size());
   for (const int var : variables_to_fix) {
-    model_proto.mutable_variables(var)->clear_domain();
-    model_proto.mutable_variables(var)->add_domain(response.solution(var));
-    model_proto.mutable_variables(var)->add_domain(response.solution(var));
+    result.mutable_variables(var)->clear_domain();
+    result.mutable_variables(var)->add_domain(initial_solution.solution(var));
+    result.mutable_variables(var)->add_domain(initial_solution.solution(var));
   }
 
   // Set the current solution as a hint.
-  model_proto.clear_solution_hint();
-  for (int var = 0; var < model_proto.variables_size(); ++var) {
-    model_proto.mutable_solution_hint()->add_vars(var);
-    model_proto.mutable_solution_hint()->add_values(response.solution(var));
+  result.clear_solution_hint();
+  for (int var = 0; var < result.variables_size(); ++var) {
+    result.mutable_solution_hint()->add_vars(var);
+    result.mutable_solution_hint()->add_values(initial_solution.solution(var));
   }
 
   // TODO(user): force better objective? Note that this is already done when the
   // hint above is sucessfully loaded (i.e. if it passes the presolve correctly)
   // since the solver will try to find better solution than the current one.
-  return model_proto;
+  return result;
 }
 
-}  // namespace
+CpModelProto NeighborhoodGeneratorHelper::RelaxGivenVariables(
+    const CpSolverResponse& initial_solution,
+    const std::vector<int>& relaxed_variables) const {
+  std::vector<bool> relaxed_variables_set(model_proto_.variables_size(), false);
+  for (const int var : relaxed_variables) relaxed_variables_set[var] = true;
+  std::vector<int> fixed_variables;
+  for (const int i : active_variables_) {
+    if (!relaxed_variables_set[i]) {
+      fixed_variables.push_back(i);
+    }
+  }
+  return FixGivenVariables(initial_solution, fixed_variables);
+}
 
 CpModelProto SimpleNeighborhoodGenerator::Generate(
     const CpSolverResponse& initial_solution, int64 seed,
@@ -71,95 +118,97 @@ CpModelProto SimpleNeighborhoodGenerator::Generate(
   random_engine_t random;
   random.seed(seed);
 
-  // TODO(user): we could generate this more efficiently that using random
+  // TODO(user): we could generate this more efficiently than using random
   // shuffle.
-  const int num_vars = model_proto_.variables_size();
-  std::vector<int> fixed_variables(num_vars);
-  for (int i = 0; i < num_vars; ++i) fixed_variables[i] = i;
-  std::shuffle(fixed_variables.begin(), fixed_variables.end(), random);
+  std::vector<int> fixed_variables = helper_.ActiveVariables();
 
-  const int target_size = std::ceil((1.0 - difficulty) * num_vars);
+  std::shuffle(fixed_variables.begin(), fixed_variables.end(), random);
+  const int target_size =
+      std::ceil((1.0 - difficulty) * fixed_variables.size());
   fixed_variables.resize(target_size);
-  return FixGivenPosition(initial_solution, fixed_variables, model_proto_);
+  return helper_.FixGivenVariables(initial_solution, fixed_variables);
 }
 
 CpModelProto VariableGraphNeighborhoodGenerator::Generate(
     const CpSolverResponse& initial_solution, int64 seed,
     double difficulty) const {
-  const int num_variables = model_proto_.variables_size();
-  const int target_size = std::ceil(difficulty * num_variables);
-  if (target_size == num_variables) return model_proto_;
+  const int num_active_vars = helper_.ActiveVariables().size();
+  const int num_model_vars = helper_.ModelProto().variables_size();
+  const int target_size = std::ceil(difficulty * num_active_vars);
+  if (target_size == num_active_vars) return helper_.ModelProto();
   CHECK_GT(target_size, 0);
 
   random_engine_t random;
   random.seed(seed);
 
-  std::uniform_int_distribution<int> random_var(0, num_variables - 1);
-  std::vector<bool> used_variables(num_variables, false);
+  std::uniform_int_distribution<int> random_var(0, num_active_vars - 1);
+  std::vector<bool> visited_variables_set(num_model_vars, false);
   std::vector<int> relaxed_variables;
+  std::vector<int> visited_variables;
 
-  relaxed_variables.push_back(random_var(random));
-  used_variables[relaxed_variables.back()] = true;
+  const int first_var = helper_.ActiveVariables()[random_var(random)];
+  visited_variables_set[first_var] = true;
+  visited_variables.push_back(first_var);
+  relaxed_variables.push_back(first_var);
 
   std::vector<int> random_variables;
-  for (int i = 0; i < relaxed_variables.size(); ++i) {
+  for (int i = 0; i < visited_variables.size(); ++i) {
     random_variables.clear();
     // Collect all the variables that appears in the same constraints as
-    // relaxed_variables[i].
-    for (const int ct : var_to_constraint_[relaxed_variables[i]]) {
-      for (const int var : constraint_to_var_[ct]) {
-        if (used_variables[var]) continue;
-        used_variables[var] = true;
+    // visited_variables[i].
+    for (const int ct : helper_.VarToConstraint()[visited_variables[i]]) {
+      for (const int var : helper_.ConstraintToVar()[ct]) {
+        if (visited_variables_set[var]) continue;
+        visited_variables_set[var] = true;
         random_variables.push_back(var);
       }
     }
-    if (relaxed_variables.size() + random_variables.size() > target_size) {
-      random_variables.resize(target_size - relaxed_variables.size());
-    }
+    // We always randomize to change the partial subgraph explored afterwards.
     std::shuffle(random_variables.begin(), random_variables.end(), random);
-    relaxed_variables.insert(relaxed_variables.end(), random_variables.begin(),
-                             random_variables.end());
+    for (const int var : random_variables) {
+      if (relaxed_variables.size() < target_size) {
+        visited_variables.push_back(var);
+        if (helper_.IsActive(var)) {
+          relaxed_variables.push_back(var);
+        }
+      } else {
+        break;
+      }
+    }
     if (relaxed_variables.size() >= target_size) break;
   }
 
-  // Compute the complement of relaxed_variables in fixed_variables.
-  std::vector<int> fixed_variables;
-  {
-    used_variables.assign(num_variables, false);
-    for (const int var : relaxed_variables) used_variables[var] = true;
-    for (int var = 0; var < num_variables; ++var) {
-      if (!used_variables[var]) fixed_variables.push_back(var);
-    }
-  }
-  return FixGivenPosition(initial_solution, fixed_variables, model_proto_);
+  return helper_.RelaxGivenVariables(initial_solution, relaxed_variables);
 }
 
 CpModelProto ConstraintGraphNeighborhoodGenerator::Generate(
     const CpSolverResponse& initial_solution, int64 seed,
     double difficulty) const {
-  const int num_vars = model_proto_.variables_size();
-  const int target_size = std::ceil(difficulty * num_vars);
-  if (target_size == num_vars) return model_proto_;
+  const int num_active_vars = helper_.ActiveVariables().size();
+  const int num_model_vars = helper_.ModelProto().variables_size();
+  const int target_size = std::ceil(difficulty * num_active_vars);
+  const int num_constraints = helper_.ConstraintToVar().size();
+  if (num_constraints == 0) return helper_.ModelProto();
+  if (target_size == num_active_vars) return helper_.ModelProto();
   CHECK_GT(target_size, 0);
 
   random_engine_t random;
   random.seed(seed);
 
-  int num_used_variables = 0;
-  std::vector<bool> relaxed_variables(var_to_constraint_.size(), false);
-  std::vector<bool> added_constraints(constraint_to_var_.size(), false);
+  std::vector<bool> visited_variables_set(num_model_vars, false);
+  std::vector<int> relaxed_variables;
+  std::vector<bool> added_constraints(num_constraints, false);
   std::vector<int> next_constraints;
 
   // Start by a random constraint.
   {
-    std::uniform_int_distribution<int> random_start(
-        0, constraint_to_var_.size() - 1);
+    std::uniform_int_distribution<int> random_start(0, num_constraints - 1);
     next_constraints.push_back(random_start(random));
     added_constraints[next_constraints.back()] = true;
   }
 
   std::vector<int> random_variables;
-  while (num_used_variables < target_size) {
+  while (relaxed_variables.size() < target_size) {
     // Stop if we have a full connected component.
     if (next_constraints.empty()) break;
 
@@ -173,28 +222,25 @@ CpModelProto ConstraintGraphNeighborhoodGenerator::Generate(
 
     // Add all the variable of this constraint and increase the set of next
     // possible constraints.
-    CHECK_LT(contraint_index, constraint_to_var_.size());
-    random_variables = constraint_to_var_[contraint_index];
+    CHECK_LT(contraint_index, num_constraints);
+    random_variables = helper_.ConstraintToVar()[contraint_index];
     std::shuffle(random_variables.begin(), random_variables.end(), random);
     for (const int var : random_variables) {
-      if (!relaxed_variables[var]) {
-        ++num_used_variables;
+      if (visited_variables_set[var]) continue;
+      visited_variables_set[var] = true;
+      if (helper_.IsActive(var)) {
+        relaxed_variables.push_back(var);
       }
-      relaxed_variables[var] = true;
-      if (num_used_variables == target_size) break;
-      for (const int ct : var_to_constraint_[var]) {
+      if (relaxed_variables.size() == target_size) break;
+
+      for (const int ct : helper_.VarToConstraint()[var]) {
         if (added_constraints[ct]) continue;
         added_constraints[ct] = true;
         next_constraints.push_back(ct);
       }
     }
   }
-
-  std::vector<int> fixed_variables;
-  for (int i = 0; i < num_vars; ++i) {
-    if (!relaxed_variables[i]) fixed_variables.push_back(i);
-  }
-  return FixGivenPosition(initial_solution, fixed_variables, model_proto_);
+  return helper_.RelaxGivenVariables(initial_solution, relaxed_variables);
 }
 
 }  // namespace sat

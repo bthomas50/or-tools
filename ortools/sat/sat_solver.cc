@@ -123,9 +123,6 @@ void SatSolver::SetParameters(const SatParameters& parameters) {
   *parameters_ = parameters;
 
   pb_constraints_.SetParameters(parameters);
-
-  random_.seed(parameters.random_seed());
-
   restart_->Reset();
   time_limit_->ResetLimitFromParameters(parameters);
 }
@@ -507,7 +504,7 @@ bool SatSolver::ReapplyAssumptionsIfNeeded() {
       ReapplyDecisionsUpTo(assumption_level_ - 1, &unused);
   counters_.num_branches = old_num_branches;
   assumption_level_ = CurrentDecisionLevel();
-  return (status == SatSolver::MODEL_SAT);
+  return (status == SatSolver::FEASIBLE);
 }
 
 bool SatSolver::PropagateAndStopAfterOneConflictResolution() {
@@ -681,7 +678,8 @@ bool SatSolver::PropagateAndStopAfterOneConflictResolution() {
                SatParameters::
                    BINARY_MINIMIZATION_FIRST_WITH_TRANSITIVE_REDUCTION) {
       binary_implication_graph_.MinimizeConflictFirstWithTransitiveReduction(
-          *trail_, &learned_conflict_, &is_marked_, &random_);
+          *trail_, &learned_conflict_, &is_marked_,
+          model_->GetOrCreate<ModelRandomGenerator>());
     }
     DCHECK(IsConflictValid(learned_conflict_));
   }
@@ -775,7 +773,7 @@ SatSolver::Status SatSolver::ReapplyDecisionsUpTo(
     const int old_level = current_decision_level_;
     const int index = EnqueueDecisionAndBackjumpOnConflict(previous_decision);
     *first_propagation_index = std::min(*first_propagation_index, index);
-    if (index == kUnsatTrailIndex) return MODEL_UNSAT;
+    if (index == kUnsatTrailIndex) return INFEASIBLE;
     if (current_decision_level_ <= old_level) {
       // A conflict occurred which backjumped to an earlier decision level.
       // We potentially backjumped over some valid decisions, so we need to
@@ -791,7 +789,7 @@ SatSolver::Status SatSolver::ReapplyDecisionsUpTo(
       decision_index = current_decision_level_;
     }
   }
-  return MODEL_SAT;
+  return FEASIBLE;
 }
 
 int SatSolver::EnqueueDecisionAndBacktrackOnConflict(Literal true_literal) {
@@ -1045,7 +1043,7 @@ void SatSolver::TryToMinimizeClause(SatClause* clause) {
 
 SatSolver::Status SatSolver::SolveInternal(TimeLimit* time_limit) {
   SCOPED_TIME_STAT(&stats_);
-  if (is_model_unsat_) return MODEL_UNSAT;
+  if (is_model_unsat_) return INFEASIBLE;
 
   // TODO(user): Because the counter are not reset to zero, this cause the
   // metrics / sec to be completely broken except when the solver is used
@@ -1134,14 +1132,14 @@ SatSolver::Status SatSolver::SolveInternal(TimeLimit* time_limit) {
 
     if (!PropagateAndStopAfterOneConflictResolution()) {
       // A conflict occurred, continue the loop.
-      if (is_model_unsat_) return StatusWithLog(MODEL_UNSAT);
+      if (is_model_unsat_) return StatusWithLog(INFEASIBLE);
     } else {
       // We need to reapply any assumptions that are not currently applied.
       if (!ReapplyAssumptionsIfNeeded()) return StatusWithLog(UnsatStatus());
 
       // At a leaf?
       if (trail_->Index() == num_variables_.value()) {
-        return StatusWithLog(MODEL_SAT);
+        return StatusWithLog(FEASIBLE);
       }
 
       if (restart_->ShouldRestart()) {
@@ -1159,9 +1157,9 @@ SatSolver::Status SatSolver::SolveInternal(TimeLimit* time_limit) {
 
         // Corner case: the minimization above being based on propagation may
         // fix the remaining variables or prove UNSAT.
-        if (is_model_unsat_) return StatusWithLog(MODEL_UNSAT);
+        if (is_model_unsat_) return StatusWithLog(INFEASIBLE);
         if (trail_->Index() == num_variables_.value()) {
-          return StatusWithLog(MODEL_SAT);
+          return StatusWithLog(FEASIBLE);
         }
       }
 
@@ -2465,10 +2463,10 @@ std::string SatStatusString(SatSolver::Status status) {
   switch (status) {
     case SatSolver::ASSUMPTIONS_UNSAT:
       return "ASSUMPTIONS_UNSAT";
-    case SatSolver::MODEL_UNSAT:
-      return "MODEL_UNSAT";
-    case SatSolver::MODEL_SAT:
-      return "MODEL_SAT";
+    case SatSolver::INFEASIBLE:
+      return "INFEASIBLE";
+    case SatSolver::FEASIBLE:
+      return "FEASIBLE";
     case SatSolver::LIMIT_REACHED:
       return "LIMIT_REACHED";
   }

@@ -43,7 +43,6 @@
 #include "ortools/sat/sat_base.h"
 #include "ortools/sat/sat_decision.h"
 #include "ortools/sat/sat_parameters.pb.h"
-#include "ortools/util/random_engine.h"
 #include "ortools/util/stats.h"
 #include "ortools/util/time_limit.h"
 
@@ -175,8 +174,8 @@ class SatSolver {
   // the start of this function.
   enum Status {
     ASSUMPTIONS_UNSAT,
-    MODEL_UNSAT,
-    MODEL_SAT,
+    INFEASIBLE,
+    FEASIBLE,
     LIMIT_REACHED,
   };
   Status Solve();
@@ -196,7 +195,7 @@ class SatSolver {
   // Solve().
   //
   // If, given these assumptions, the model is UNSAT, this returns the
-  // ASSUMPTIONS_UNSAT status. MODEL_UNSAT is reserved for the case where the
+  // ASSUMPTIONS_UNSAT status. INFEASIBLE is reserved for the case where the
   // model is proven to be unsat without any assumptions.
   //
   // If ASSUMPTIONS_UNSAT is returned, it is possible to get a "core" of unsat
@@ -299,7 +298,7 @@ class SatSolver {
   // Helper functions to get the correct status when one of the functions above
   // returns false.
   Status UnsatStatus() const {
-    return IsModelUnsat() ? MODEL_UNSAT : ASSUMPTIONS_UNSAT;
+    return IsModelUnsat() ? INFEASIBLE : ASSUMPTIONS_UNSAT;
   }
 
   // Extract the current problem clauses. The Output type must support the two
@@ -452,12 +451,12 @@ class SatSolver {
   // backjumps. In this case, we will simply keep reapplying decisions from the
   // last one backtracked over and so on.
   //
-  // Returns MODEL_STAT if no conflict occurred, MODEL_UNSAT if the model was
+  // Returns FEASIBLE if no conflict occurred, INFEASIBLE if the model was
   // proven unsat and ASSUMPTION_UNSAT otherwise. In the last case the first non
   // taken old decision will be propagated to false by the ones before.
   //
   // first_propagation_index will be filled with the trail index of the first
-  // newly propagated literal, or with -1 if MODEL_UNSAT is returned.
+  // newly propagated literal, or with -1 if INFEASIBLE is returned.
   Status ReapplyDecisionsUpTo(int level, int* first_propagation_index);
 
   // Returns false if the thread memory is over the limit.
@@ -795,9 +794,6 @@ class SatSolver {
   // "cache" to avoid inspecting many times the same reason during conflict
   // analysis.
   VariableWithSameReasonIdentifier same_reason_identifier_;
-
-  // A random number generator.
-  mutable random_engine_t random_;
 
   // Temporary vector used by AddProblemClause().
   std::vector<LiteralWithCoeff> tmp_pb_constraint_;

@@ -22,10 +22,71 @@
 namespace operations_research {
 namespace sat {
 
+// Contains pre-computed information about a given CpModelProto that is meant
+// to be used to generate LNS neighborhood. This class can be shared between
+// more than one generator in order to reduce memory usage.
+//
+// Thread-safe.
+class NeighborhoodGeneratorHelper {
+ public:
+  NeighborhoodGeneratorHelper(CpModelProto const* model,
+                              bool focus_on_decision_variables);
+
+  // Returns the LNS fragment where the given variables are fixed to the value
+  // they take in the given solution.
+  CpModelProto FixGivenVariables(
+      const CpSolverResponse& initial_solution,
+      const std::vector<int>& variables_to_fix) const;
+
+  // Returns the LNS fragment which will relax all inactive variables and all
+  // variables in relaxed_variables.
+  CpModelProto RelaxGivenVariables(
+      const CpSolverResponse& initial_solution,
+      const std::vector<int>& relaxed_variables) const;
+
+  // Indicates if the variable can be frozen. It happens if the variable is non
+  // constant, and if it is a decision variable, or if
+  // focus_on_decision_variables is false.
+  bool IsActive(int var) const;
+
+  // Returns the list of "active" variables.
+  const std::vector<int>& ActiveVariables() const { return active_variables_; }
+
+  // Constraints <-> Variables graph.
+  const std::vector<std::vector<int>>& ConstraintToVar() const {
+    return constraint_to_var_;
+  }
+  const std::vector<std::vector<int>>& VarToConstraint() const {
+    return var_to_constraint_;
+  }
+
+  // The initial problem.
+  const CpModelProto& ModelProto() const { return model_proto_; }
+
+ private:
+  // Indicates if a variable is fixed in the model.
+  bool IsConstant(int var) const;
+
+  const CpModelProto& model_proto_;
+
+  // Variable-Constraint graph.
+  std::vector<std::vector<int>> constraint_to_var_;
+  std::vector<std::vector<int>> var_to_constraint_;
+
+  // The set of active variables, that is the list of non constant variables
+  // if focus_on_decision_variables_ is false, or the list of non constant
+  // decision variables otherwise.
+  // It is stored both as a list and as a set (using a Boolean vector).
+  std::vector<bool> active_variables_set_;
+  std::vector<int> active_variables_;
+};
+
 // Base class for a CpModelProto neighborhood generator.
 class NeighborhoodGenerator {
  public:
-  explicit NeighborhoodGenerator(CpModelProto const* model);
+  NeighborhoodGenerator(const std::string& name,
+                        NeighborhoodGeneratorHelper const* helper)
+      : helper_(*helper), name_(name) {}
   virtual ~NeighborhoodGenerator() {}
 
   // Generates a "local" subproblem for the given seed.
@@ -45,19 +106,20 @@ class NeighborhoodGenerator {
   virtual CpModelProto Generate(const CpSolverResponse& initial_solution,
                                 int64 seed, double difficulty) const = 0;
 
+  // Returns a short description of the generator.
+  std::string name() const { return name_; }
+
  protected:
-  // TODO(user): for now and for convenience, we generate the
-  // variable-constraint graph even if not all subclass will need it.
-  const CpModelProto& model_proto_;
-  std::vector<std::vector<int>> constraint_to_var_;
-  std::vector<std::vector<int>> var_to_constraint_;
+  const NeighborhoodGeneratorHelper& helper_;
+  const std::string name_;
 };
 
 // Pick a random subset of variables.
 class SimpleNeighborhoodGenerator : public NeighborhoodGenerator {
  public:
-  explicit SimpleNeighborhoodGenerator(CpModelProto const* model)
-      : NeighborhoodGenerator(model) {}
+  explicit SimpleNeighborhoodGenerator(
+      NeighborhoodGeneratorHelper const* helper, const std::string& name)
+      : NeighborhoodGenerator(name, helper) {}
   CpModelProto Generate(const CpSolverResponse& initial_solution, int64 seed,
                         double difficulty) const final;
 };
@@ -68,8 +130,9 @@ class SimpleNeighborhoodGenerator : public NeighborhoodGenerator {
 // variable of the last "level" are selected randomly.
 class VariableGraphNeighborhoodGenerator : public NeighborhoodGenerator {
  public:
-  explicit VariableGraphNeighborhoodGenerator(CpModelProto const* model)
-      : NeighborhoodGenerator(model) {}
+  explicit VariableGraphNeighborhoodGenerator(
+      NeighborhoodGeneratorHelper const* helper, const std::string& name)
+      : NeighborhoodGenerator(name, helper) {}
   CpModelProto Generate(const CpSolverResponse& initial_solution, int64 seed,
                         double difficulty) const final;
 };
@@ -80,8 +143,9 @@ class VariableGraphNeighborhoodGenerator : public NeighborhoodGenerator {
 // constraints. The variable from the "last" constraint are selected randomly.
 class ConstraintGraphNeighborhoodGenerator : public NeighborhoodGenerator {
  public:
-  explicit ConstraintGraphNeighborhoodGenerator(CpModelProto const* model)
-      : NeighborhoodGenerator(model) {}
+  explicit ConstraintGraphNeighborhoodGenerator(
+      NeighborhoodGeneratorHelper const* helper, const std::string& name)
+      : NeighborhoodGenerator(name, helper) {}
   CpModelProto Generate(const CpSolverResponse& initial_solution, int64 seed,
                         double difficulty) const final;
 };

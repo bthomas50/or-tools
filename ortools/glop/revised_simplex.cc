@@ -998,10 +998,7 @@ Status RevisedSimplex::CreateInitialBasis() {
       InitialBasis initial_basis(matrix_with_slack_, objective_, lower_bound_,
                                  upper_bound_, variables_info_.GetTypeRow());
 
-      if (parameters_.use_dual_simplex()) {
-        // This dual version only uses zero-cost columns to complete the basis.
-        initial_basis.CompleteTriangularDualBasis(num_cols_, &basis);
-      } else if (parameters_.initial_basis() == GlopParameters::BIXBY) {
+      if (parameters_.initial_basis() == GlopParameters::BIXBY) {
         if (parameters_.use_scaling()) {
           initial_basis.CompleteBixbyBasis(first_slack_col_, &basis);
         } else {
@@ -1009,15 +1006,31 @@ Status RevisedSimplex::CreateInitialBasis() {
                   << "to be scaled. Skipping Bixby's algorithm.";
         }
       } else if (parameters_.initial_basis() == GlopParameters::TRIANGULAR) {
+        const RowToColMapping basis_copy = basis;
+
         // Note the use of num_cols_ here because this algorithm
         // benefits from treating fixed slack columns like any other column.
-        RowToColMapping basis_copy = basis;
-        if (!initial_basis.CompleteTriangularPrimalBasis(num_cols_, &basis)) {
-          VLOG(1) << "Reverting to Bixby's initial basis algorithm.";
+        if (parameters_.use_dual_simplex()) {
+          // This dual version only uses zero-cost columns to complete the
+          // basis.
+          initial_basis.CompleteTriangularDualBasis(num_cols_, &basis);
+        } else {
+          initial_basis.CompleteTriangularPrimalBasis(num_cols_, &basis);
+        }
+        const Status status = InitializeFirstBasis(basis);
+
+        // Check that the upper bound on the condition number of LU is below
+        // 1e50. We have chosen an arbitrarily high threshold, because the
+        // purpose of this code is to just revert to the "safe" basis on large
+        // problematic problem when we observed an "infinity" condition number
+        // (on cond11.mps).
+        if (status.ok() &&
+            basis_factorization_
+                    .ComputeInfinityNormConditionNumberUpperBound() < 1e50) {
+          return status;
+        } else {
+          VLOG(1) << "Reverting to all slack basis.";
           basis = basis_copy;
-          if (parameters_.use_scaling()) {
-            initial_basis.CompleteBixbyBasis(first_slack_col_, &basis);
-          }
         }
       } else {
         VLOG(1) << "Unsupported initial_basis parameters: "
@@ -1040,6 +1053,7 @@ Status RevisedSimplex::InitializeFirstBasis(const RowToColMapping& basis) {
     }
     variables_info_.Update(basis_[row], VariableStatus::BASIC);
   }
+
   GLOP_RETURN_IF_ERROR(basis_factorization_.Initialize());
   PermuteBasis();
   DCHECK(BasisIsConsistent());
@@ -1373,17 +1387,6 @@ Fractional RevisedSimplex::ComputeDirectionError(ColIndex col) {
   return InfinityNorm(error_);
 }
 
-void RevisedSimplex::SkipVariableForRatioTest(RowIndex row) {
-  // Setting direction_[row] to 0.0 is an effective way to ignore the row
-  // during the ratio test. The direction vector will be restored later from
-  // the information in direction_ignored_position_.
-  IF_STATS_ENABLED(
-      ratio_test_stats_.abs_skipped_pivot.Add(std::abs(direction_[row])));
-  VLOG(1) << "Skipping leaving variable with coefficient " << direction_[row];
-  direction_ignored_position_.SetCoefficient(row, direction_[row]);
-  direction_[row] = 0.0;
-}
-
 template <bool is_entering_reduced_cost_positive>
 Fractional RevisedSimplex::GetRatio(RowIndex row) const {
   const ColIndex col = basis_[row];
@@ -1421,10 +1424,18 @@ Fractional RevisedSimplex::ComputeHarrisRatioAndLeavingCandidates(
   // bound-flip over such leaving variable.
   Fractional harris_ratio = bound_flip_ratio;
   leaving_candidates->Clear();
-  const Fractional threshold = parameters_.ratio_test_zero_threshold();
+
+  // If the basis is refactorized, then we should have everything with a good
+  // precision, so we only consider "acceptable" pivots. Otherwise we consider
+  // all the entries, and if the algorithm return a pivot that is too small, we
+  // will refactorize and recompute the relevant quantities.
+  const Fractional threshold = basis_factorization_.IsRefactorized()
+                                   ? parameters_.minimum_acceptable_pivot()
+                                   : parameters_.ratio_test_zero_threshold();
+
   for (const RowIndex row : direction_.non_zeros) {
     const Fractional magnitude = std::abs(direction_[row]);
-    if (magnitude < threshold) continue;
+    if (magnitude <= threshold) continue;
     Fractional ratio = GetRatio<is_entering_reduced_cost_positive>(row);
     // TODO(user): The perturbation is currently disabled, so no need to test
     // anything here.
@@ -1486,7 +1497,6 @@ Status RevisedSimplex::ChooseLeavingVariableRow(
   DCHECK_NE(0.0, reduced_cost);
 
   // A few cases will cause the test to be recomputed from the beginning.
-  direction_ignored_position_.Clear();
   int stats_num_leaving_choices = 0;
   equivalent_leaving_choices_.clear();
   while (true) {
@@ -1597,41 +1607,31 @@ Status RevisedSimplex::ChooseLeavingVariableRow(
     // TODO(user): We may have to choose another entering column if
     // we cannot prevent pivoting by a small pivot.
     // (Chvatal, p.115, about epsilon2.)
-    //
-    // Note(user): As of May 2013, just checking the pivot size is not
-    // preventing the algorithm to run into a singular basis in some rare cases.
-    // One way to be more precise is to also take into account the norm of the
-    // direction.
     if (pivot_magnitude <
         parameters_.small_pivot_threshold() * direction_infinity_norm_) {
-      VLOG(1) << "Trying not to pivot by " << direction_[*leaving_row]
-              << " direction_infinity_norm_ = " << direction_infinity_norm_;
-
       // The first countermeasure is to recompute everything to the best
       // precision we can in the hope of avoiding such a choice. Note that this
       // helps a lot on the Netlib problems.
       if (!basis_factorization_.IsRefactorized()) {
+        VLOG(1) << "Refactorizing to avoid pivoting by "
+                << direction_[*leaving_row]
+                << " direction_infinity_norm_ = " << direction_infinity_norm_
+                << " reduced cost = " << reduced_cost;
         *refactorize = true;
         return Status::OK();
       }
 
-      // Note(user): This reduces quite a bit the number of iterations.
-      // What is its impact? Is it dangerous?
-      if (std::abs(direction_[*leaving_row]) <
-          parameters_.minimum_acceptable_pivot()) {
-        SkipVariableForRatioTest(*leaving_row);
-        continue;
-      }
-
-      // TODO(user): in almost all cases, testing the pivot is not useful
-      // because the two countermeasures above will be enough. Investigate
-      // more. The false makes sure that this will just be compiled away.
-      if (/* DISABLES CODE */ (false) &&
-          /* DISABLES CODE */ (!TestPivot(entering_col, *leaving_row))) {
-        SkipVariableForRatioTest(*leaving_row);
-        continue;
-      }
-
+      // Because of the "threshold" in ComputeHarrisRatioAndLeavingCandidates()
+      // we kwnow that this pivot will still have an acceptable magnitude.
+      //
+      // TODO(user): An issue left to fix is that if there is no such pivot at
+      // all, then we will report unbounded even if this is not really the case.
+      // As of 2018/07/18, this happens on l30.mps.
+      VLOG(1) << "Couldn't avoid pivoting by " << direction_[*leaving_row]
+              << " direction_infinity_norm_ = " << direction_infinity_norm_
+              << " reduced cost = " << reduced_cost;
+      DCHECK_GE(std::abs(direction_[*leaving_row]),
+                parameters_.minimum_acceptable_pivot());
       IF_STATS_ENABLED(ratio_test_stats_.abs_tested_pivot.Add(pivot_magnitude));
     }
     break;
@@ -1644,12 +1644,6 @@ Status RevisedSimplex::ChooseLeavingVariableRow(
     *target_bound = (is_reduced_cost_positive == is_leaving_coeff_positive)
                         ? upper_bound_[basis_[*leaving_row]]
                         : lower_bound_[basis_[*leaving_row]];
-  }
-
-  // Revert the temporary modification to direction_.
-  // This is important! Otherwise we would propagate some artificial errors.
-  for (const SparseColumn::Entry e : direction_ignored_position_) {
-    direction_[e.row()] = e.coefficient();
   }
 
   // Stats.
@@ -2221,8 +2215,21 @@ Status RevisedSimplex::UpdateAndPivot(ColIndex entering_col,
                                       target_bound);
   }
   UpdateBasis(entering_col, leaving_row, leaving_variable_status);
-  GLOP_RETURN_IF_ERROR(
-      basis_factorization_.Update(entering_col, leaving_row, direction_));
+
+  const Fractional pivot_from_direction = direction_[leaving_row];
+  const Fractional pivot_from_update_row =
+      update_row_.GetCoefficient(entering_col);
+  const Fractional diff =
+      std::abs(pivot_from_update_row - pivot_from_direction);
+  if (diff > parameters_.refactorization_threshold() *
+                 (1 + std::abs(pivot_from_direction))) {
+    VLOG(1) << "Refactorizing: imprecise pivot " << pivot_from_direction
+            << " diff = " << diff;
+    GLOP_RETURN_IF_ERROR(basis_factorization_.ForceRefactorization());
+  } else {
+    GLOP_RETURN_IF_ERROR(
+        basis_factorization_.Update(entering_col, leaving_row, direction_));
+  }
   if (basis_factorization_.IsRefactorized()) {
     PermuteBasis();
   }
@@ -2429,8 +2436,7 @@ Status RevisedSimplex::Minimize(TimeLimit* time_limit) {
       // practice. Note that the final returned solution will have the property
       // that all non-basic variables are at their exact bound, so it is nice
       // that we do not report ProblemStatus::PRIMAL_FEASIBLE if a solution with
-      // this property
-      // cannot be found.
+      // this property cannot be found.
       step = ComputeStepToMoveBasicVariableToBound(leaving_row, target_bound);
     }
 
@@ -2958,9 +2964,9 @@ void RevisedSimplex::DisplayVariableBounds() {
   }
 }
 
-ITIVector<RowIndex, SparseRow> RevisedSimplex::ComputeDictionary(
+gtl::ITIVector<RowIndex, SparseRow> RevisedSimplex::ComputeDictionary(
     const DenseRow* column_scales) {
-  ITIVector<RowIndex, SparseRow> dictionary(num_rows_.value());
+  gtl::ITIVector<RowIndex, SparseRow> dictionary(num_rows_.value());
   for (ColIndex col(0); col < num_cols_; ++col) {
     ComputeDirection(col);
     for (const RowIndex row : direction_.non_zeros) {
@@ -2978,6 +2984,17 @@ ITIVector<RowIndex, SparseRow> RevisedSimplex::ComputeDictionary(
     }
   }
   return dictionary;
+}
+
+void RevisedSimplex::ComputeBasicVariablesForState(
+    const LinearProgram& linear_program, const BasisState& state) {
+  LoadStateForNextSolve(state);
+  Status status = Initialize(linear_program);
+  if (status.ok()) {
+    variable_values_.RecomputeBasicVariableValues();
+    variable_values_.ResetPrimalInfeasibilityInformation();
+    solution_objective_value_ = ComputeInitialProblemObjectiveValue();
+  }
 }
 
 void RevisedSimplex::DisplayRevisedSimplexDebugInfo() {

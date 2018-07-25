@@ -7,7 +7,8 @@ LIB_PREFIX =
 PRE_LIB = $(OR_ROOT)lib\\
 POST_LIB = .lib
 LIB_SUFFIX = lib
-SWIG_LIB_SUFFIX = dll
+SWIG_PYTHON_LIB_SUFFIX = dll
+SWIG_DOTNET_LIB_SUFFIX = dll
 JNI_LIB_EXT = dll
 STATIC_PRE_LIB = $(OR_ROOT)lib\\
 STATIC_POST_LIB = .lib
@@ -15,18 +16,25 @@ STATIC_LIB_SUFFIX = lib
 LINK_CMD = lib
 STATIC_LINK_CMD = lib
 
-LIB_DIR = $(OR_ROOT)lib
-BIN_DIR = $(OR_ROOT)bin
-GEN_DIR = $(OR_ROOT)ortools\\gen
-OBJ_DIR = $(OR_ROOT)objs
 SRC_DIR = $(OR_ROOT).
 EX_DIR  = $(OR_ROOT)examples
+GEN_DIR = $(OR_ROOT)ortools/gen
+GEN_PATH = $(subst /,$S,$(GEN_DIR))
+JAVA_EX_DIR  = $(OR_ROOT)examples/java
+JAVA_EX_PATH = $(subst /,$S,$(JAVA_EX_DIR))
+DOTNET_EX_DIR  = $(OR_ROOT)examples/dotnet
+DOTNET_EX_PATH = $(subst /,$S,$(DOTNET_EX_DIR))
+OBJ_DIR = $(OR_ROOT)objs
+CLASS_DIR = $(OR_ROOT)classes
+LIB_DIR = $(OR_ROOT)lib
+BIN_DIR = $(OR_ROOT)bin
 INC_DIR = $(OR_ROOT).
 
 O=obj
 E=.exe
 L=lib
-DLL=.dll
+J=.jar
+D=.dll
 PDB=.pdb
 EXP=.exp
 ARCHIVE_EXT = .zip
@@ -36,19 +44,24 @@ EXE_OUT = /Fe
 LD_OUT = /OUT:
 DYNAMIC_LD = link /DLL /LTCG /debug
 S = \\
-CPSEP =;
+CMDSEP=&
+CPSEP=;
 
 COPY = copy
 COPYREC = xcopy
 DEL = del
-DELREC = tools\rm.exe -rf
-GREP = tools\grep.exe
+DELREC = tools\win\rm.exe -rf
+GREP = tools\win\grep.exe
 MKDIR = md
-MKDIR_P = tools\mkdir.exe -p
+MKDIR_P = tools\win\mkdir.exe -p
 RENAME = rename
-SED = tools\sed.exe
-TOUCH = tools\touch.exe
-WHICH = tools\which.exe
+SED = tools\win\sed.exe
+TAR = tools\win\tar.exe
+TOUCH = tools\win\touch.exe
+UNZIP = tools\win\unzip.exe
+ZIP = tools\win\zip.exe
+WGET = tools\win\wget.exe
+WHICH = tools\win\which.exe
 
 # We Can't force SHELL to cmd.exe if sh.exe is in the PATH
 # cf https://www.gnu.org/software/make/manual/html_node/Choosing-the-Shell.html
@@ -133,7 +146,7 @@ CFLAGS = -nologo $(SYSCFLAGS) $(DEBUG) /I$(INC_DIR) /I$(GEN_DIR) \
  $(GFLAGS_INC) $(GLOG_INC) $(ZLIB_INC) $(MINISAT_INC) $(PROTOBUF_INC) \
  $(CBC_INC) $(CLP_INC) \
  $(GLPK_INC) $(SCIP_INC) $(CPLEX_INC) $(GUROBI_INC) \
- /DUSE_GLOP /DUSE_BOP /D__WIN32__ /DPSAPI_VERSION=1
+ /DUSE_GLOP /DUSE_BOP /D__WIN32__ /DPSAPI_VERSION=1 /DNOMINMAX
 JNIFLAGS=$(CFLAGS) $(JAVA_INC)
 DYNAMIC_GFLAGS_LNK = $(WINDOWS_GFLAGS_DIR)\\lib\\gflags_static.lib
 STATIC_GFLAGS_LNK = $(WINDOWS_GFLAGS_DIR)\\lib\\gflags_static.lib

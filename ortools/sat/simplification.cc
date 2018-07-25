@@ -56,8 +56,8 @@ void SatPostsolver::FixVariable(Literal x) {
 }
 
 void SatPostsolver::ApplyMapping(
-    const ITIVector<BooleanVariable, BooleanVariable>& mapping) {
-  ITIVector<BooleanVariable, BooleanVariable> new_mapping;
+    const gtl::ITIVector<BooleanVariable, BooleanVariable>& mapping) {
+  gtl::ITIVector<BooleanVariable, BooleanVariable> new_mapping;
   if (reverse_mapping_.size() < mapping.size()) {
     // We have new variables.
     while (reverse_mapping_.size() < mapping.size()) {
@@ -231,9 +231,9 @@ void SatPresolver::AddClauseInternal(std::vector<Literal>* clause) {
   }
 }
 
-ITIVector<BooleanVariable, BooleanVariable> SatPresolver::VariableMapping()
+gtl::ITIVector<BooleanVariable, BooleanVariable> SatPresolver::VariableMapping()
     const {
-  ITIVector<BooleanVariable, BooleanVariable> result;
+  gtl::ITIVector<BooleanVariable, BooleanVariable> result;
   BooleanVariable new_var(0);
   for (BooleanVariable var(0); var < NumVariables(); ++var) {
     if (literal_to_clause_sizes_[Literal(var, true).Index()] > 0 ||
@@ -256,7 +256,8 @@ void SatPresolver::LoadProblemIntoSatSolver(SatSolver* solver) {
   clause_to_process_.clear();
   literal_to_clauses_.clear();
 
-  const ITIVector<BooleanVariable, BooleanVariable> mapping = VariableMapping();
+  const gtl::ITIVector<BooleanVariable, BooleanVariable> mapping =
+      VariableMapping();
   int new_size = 0;
   for (BooleanVariable index : mapping) {
     if (index != kNoBooleanVariable) ++new_size;
@@ -1018,7 +1019,7 @@ class PropagationGraph {
 void ProbeAndFindEquivalentLiteral(
     SatSolver* solver, SatPostsolver* postsolver,
     DratProofHandler* drat_proof_handler,
-    ITIVector<LiteralIndex, LiteralIndex>* mapping) {
+    gtl::ITIVector<LiteralIndex, LiteralIndex>* mapping) {
   solver->Backtrack(0);
   mapping->clear();
   const int num_already_fixed_vars = solver->LiteralTrail().Index();
@@ -1149,7 +1150,7 @@ SatSolver::Status SolveWithPresolve(std::unique_ptr<SatSolver>* solver,
       const SatSolver::Status result =
           (*solver)->SolveWithTimeLimit(time_limit);
       if (result != SatSolver::LIMIT_REACHED) {
-        if (result == SatSolver::MODEL_SAT) {
+        if (result == SatSolver::FEASIBLE) {
           VLOG(1) << "Problem solved by trivial heuristic!";
           solution->clear();
           for (int i = 0; i < (*solver)->NumVariables(); ++i) {
@@ -1165,7 +1166,7 @@ SatSolver::Status SolveWithPresolve(std::unique_ptr<SatSolver>* solver,
       (*solver)->RestoreSolverToAssumptionLevel();
       if ((*solver)->IsModelUnsat()) {
         VLOG(1) << "UNSAT during random decision heuritics.";
-        return SatSolver::MODEL_UNSAT;
+        return SatSolver::INFEASIBLE;
       }
 
       RandomizeDecisionHeuristic(&random, &new_params);
@@ -1187,12 +1188,12 @@ SatSolver::Status SolveWithPresolve(std::unique_ptr<SatSolver>* solver,
 
     // Probe + find equivalent literals.
     // TODO(user): Use a derived time limit in the probing phase.
-    ITIVector<LiteralIndex, LiteralIndex> equiv_map;
+    gtl::ITIVector<LiteralIndex, LiteralIndex> equiv_map;
     ProbeAndFindEquivalentLiteral((*solver).get(), &postsolver,
                                   drat_proof_handler, &equiv_map);
     if ((*solver)->IsModelUnsat()) {
       VLOG(1) << "UNSAT during probing.";
-      return SatSolver::MODEL_UNSAT;
+      return SatSolver::INFEASIBLE;
     }
 
     // The rest of the presolve only work on pure SAT problem.
@@ -1222,7 +1223,7 @@ SatSolver::Status SolveWithPresolve(std::unique_ptr<SatSolver>* solver,
 
       // This is just here to reset the SatSolver::Solve() satistics.
       (*solver).reset(new SatSolver());
-      return SatSolver::MODEL_UNSAT;
+      return SatSolver::INFEASIBLE;
     }
 
     postsolver.ApplyMapping(presolver.VariableMapping());
@@ -1242,7 +1243,7 @@ SatSolver::Status SolveWithPresolve(std::unique_ptr<SatSolver>* solver,
 
   // Solve.
   const SatSolver::Status result = (*solver)->SolveWithTimeLimit(time_limit);
-  if (result == SatSolver::MODEL_SAT) {
+  if (result == SatSolver::FEASIBLE) {
     *solution = postsolver.ExtractAndPostsolveSolution(**solver);
   }
   return result;

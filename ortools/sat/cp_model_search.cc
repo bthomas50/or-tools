@@ -16,8 +16,9 @@
 #include <random>
 #include <unordered_map>
 
+#include "ortools/base/stringprintf.h"
 #include "ortools/sat/cp_model_utils.h"
-#include "ortools/util/random_engine.h"
+#include "ortools/sat/util.h"
 
 namespace operations_research {
 namespace sat {
@@ -36,12 +37,6 @@ struct Strategy {
 struct VarValue {
   IntegerVariable var;
   IntegerValue value;
-};
-
-// Thin wrapper around a random_engine. This helps store a random engine
-// inside a Model as template programming messes up compilation.
-struct SearchStrategyRandomGenerator {
-  random_engine_t rand;
 };
 
 const std::function<LiteralIndex()> ConstructSearchStrategyInternal(
@@ -134,16 +129,9 @@ const std::function<LiteralIndex()> ConstructSearchStrategyInternal(
         active_vars.erase(std::remove_if(active_vars.begin(), active_vars.end(),
                                          is_above_tolerance),
                           active_vars.end());
-        // TODO(user): Move this to its own method.
-        const bool seeded =
-            model->Get<SearchStrategyRandomGenerator>() != nullptr;
-        SearchStrategyRandomGenerator* const rw =
-            model->GetOrCreate<SearchStrategyRandomGenerator>();
-        if (!seeded) {
-          rw->rand.seed(parameters->random_seed());
-        }
-        const int winner = std::uniform_int_distribution<int>(
-            0, active_vars.size() - 1)(rw->rand);
+        const int winner =
+            std::uniform_int_distribution<int>(0, active_vars.size() - 1)(
+                *model->GetOrCreate<ModelRandomGenerator>());
         candidate = active_vars[winner].var;
         candidate_lb = integer_trail->LowerBound(candidate);
         candidate_ub = integer_trail->UpperBound(candidate);
@@ -180,7 +168,11 @@ std::function<LiteralIndex()> ConstructSearchStrategy(
     const std::vector<IntegerVariable>& variable_mapping,
     IntegerVariable objective_var, Model* model) {
   // Default strategy is to instantiate the IntegerVariable in order.
-  if (cp_model_proto.search_strategy().empty()) {
+  std::function<LiteralIndex()> default_search_strategy = nullptr;
+  const bool instantiate_all_variables =
+      model->GetOrCreate<SatParameters>()->instantiate_all_variables();
+
+  if (instantiate_all_variables) {
     std::vector<IntegerVariable> decisions;
     for (const IntegerVariable var : variable_mapping) {
       if (var == kNoIntegerVariable) continue;
@@ -192,7 +184,8 @@ std::function<LiteralIndex()> ConstructSearchStrategy(
         decisions.push_back(var);
       }
     }
-    return FirstUnassignedVarAtItsMinHeuristic(decisions, model);
+    default_search_strategy =
+        FirstUnassignedVarAtItsMinHeuristic(decisions, model);
   }
 
   std::vector<Strategy> strategies;
@@ -218,8 +211,14 @@ std::function<LiteralIndex()> ConstructSearchStrategy(
       }
     }
   }
-  return ConstructSearchStrategyInternal(var_to_coeff_offset_pair, strategies,
-                                         model);
+  if (instantiate_all_variables) {
+    return SequentialSearch({ConstructSearchStrategyInternal(
+                                 var_to_coeff_offset_pair, strategies, model),
+                             default_search_strategy});
+  } else {
+    return ConstructSearchStrategyInternal(var_to_coeff_offset_pair, strategies,
+                                           model);
+  }
 }
 
 std::function<LiteralIndex()> InstrumentSearchStrategy(
@@ -260,6 +259,184 @@ std::function<LiteralIndex()> InstrumentSearchStrategy(
     LOG(INFO) << to_display;
     return decision;
   };
+}
+
+SatParameters DiversifySearchParameters(const SatParameters& params,
+                                        const CpModelProto& cp_model,
+                                        const int worker_id,
+                                        std::string* name) {
+  // Note: in the flatzinc setting, we know we always have a fixed search
+  //       defined.
+  // Things to try:
+  //   - Specialize for purely boolean problems
+  //   - Disable linearization_level options for non linear problems
+  //   - Fast restart in randomized search
+  //   - Different propatation levels for scheduling constraints
+  SatParameters new_params = params;
+  new_params.set_random_seed(params.random_seed() + worker_id);
+  if (cp_model.has_objective()) {
+    switch (worker_id) {
+      case 0: {  // Use default parameters and fixed search.
+        new_params.set_search_branching(SatParameters::FIXED_SEARCH);
+        *name = "fixed";
+        break;
+      }
+      case 1: {  // Use default parameters and automatic search.
+        new_params.set_search_branching(SatParameters::AUTOMATIC_SEARCH);
+        new_params.set_linearization_level(1);
+        *name = "auto";
+        break;
+      }
+      case 2: {  // Remove LP relaxation.
+        new_params.set_search_branching(SatParameters::AUTOMATIC_SEARCH);
+        new_params.set_linearization_level(0);
+        *name = "no_lp";
+        break;
+      }
+      case 3: {  // Reinforce LP relaxation.
+        new_params.set_search_branching(SatParameters::AUTOMATIC_SEARCH);
+        new_params.set_linearization_level(2);
+        *name = "max_lp";
+        break;
+      }
+      case 4: {  // Core based approach.
+        new_params.set_search_branching(SatParameters::AUTOMATIC_SEARCH);
+        new_params.set_optimize_with_core(true);
+        new_params.set_linearization_level(0);
+        *name = "core";
+        break;
+      }
+      default: {  // LNS.
+        new_params.set_search_branching(SatParameters::AUTOMATIC_SEARCH);
+        new_params.set_use_lns(true);
+        new_params.set_lns_num_threads(1);
+        *name = absl::StrFormat("lns_%i", worker_id - 5);
+      }
+    }
+  } else {
+    // The goal here is to try fixed and free search on the first two threads.
+    // Then maximize diversity on the extra threads.
+    switch (worker_id) {
+      case 0: {
+        new_params.set_search_branching(SatParameters::FIXED_SEARCH);
+        *name = "fixed";
+        break;
+      }
+      case 1: {
+        new_params.set_search_branching(SatParameters::AUTOMATIC_SEARCH);
+        *name = "auto";
+        break;
+      }
+      case 2: {
+        new_params.set_search_branching(SatParameters::AUTOMATIC_SEARCH);
+        new_params.set_boolean_encoding_level(0);
+        *name = "less encoding";
+        break;
+      }
+      default: {  // Randomized fixed search.
+        new_params.set_search_branching(SatParameters::FIXED_SEARCH);
+        new_params.set_randomize_search(true);
+        new_params.set_search_randomization_tolerance(worker_id - 3);
+        *name = absl::StrFormat("rnd_%i", worker_id - 3);
+        break;
+      }
+    }
+  }
+
+  return new_params;
+}
+
+// TODO(user): Better stats in the multi thread case.
+//                Should we cumul conflicts, branches... ?
+bool MergeOptimizationSolution(const CpSolverResponse& response, bool maximize,
+                               CpSolverResponse* best) {
+  switch (response.status()) {
+    case CpSolverStatus::FEASIBLE: {
+      const bool is_improving =
+          maximize ? response.objective_value() > best->objective_value()
+                   : response.objective_value() < best->objective_value();
+      const double current_best_bound = response.best_objective_bound();
+      const double previous_best_bound = best->best_objective_bound();
+      const double new_best_objective_bound =
+          maximize ? std::min(previous_best_bound, current_best_bound)
+                   : std::max(previous_best_bound, current_best_bound);
+      // TODO(user): return OPTIMAL if objective is tight.
+      if (is_improving) {
+        // Overwrite solution and fix best_objective_bound.
+        *best = response;
+        best->set_best_objective_bound(new_best_objective_bound);
+        return true;
+      }
+      if (new_best_objective_bound != previous_best_bound) {
+        // The new solution has a worse objective value, but a better
+        // best_objective_bound.
+        best->set_best_objective_bound(new_best_objective_bound);
+        return true;
+      }
+      return false;
+    }
+    case CpSolverStatus::INFEASIBLE: {
+      if (best->status() == CpSolverStatus::UNKNOWN ||
+          best->status() == CpSolverStatus::INFEASIBLE) {
+        // Stores the unsat solution.
+        *best = response;
+        return true;
+      } else {
+        // It can happen that the LNS finds the best solution, but does
+        // not prove it. Then another worker pulls in the best solution,
+        // does not improve upon it, returns UNSAT if it has not found a
+        // previous solution, or OPTIMAL with a bad objective value, and
+        // stops all other workers. In that case, if the last solution
+        // found has a FEASIBLE status, it is indeed optimal, and
+        // should be marked as thus.
+        best->set_status(CpSolverStatus::OPTIMAL);
+        best->set_best_objective_bound(best->objective_value());
+        return false;
+      }
+      break;
+    }
+    case CpSolverStatus::OPTIMAL: {
+      const double previous = best->objective_value();
+      const double current = response.objective_value();
+      if ((maximize && current >= previous) ||
+          (!maximize && current <= previous)) {
+        // We always overwrite the best solution with an at-least as good
+        // optimal solution.
+        *best = response;
+        return true;
+      } else {
+        // We are in the same case as the INFEASIBLE above.  Solution
+        // synchronization has forced the solver to exit with a sub-optimal
+        // solution, believing it was optimal.
+        best->set_status(CpSolverStatus::OPTIMAL);
+        best->set_best_objective_bound(best->objective_value());
+        return false;
+      }
+      break;
+    }
+    case CpSolverStatus::UNKNOWN: {
+      if (best->status() == CpSolverStatus::UNKNOWN) {
+        if (!std::isfinite(best->objective_value())) {
+          // TODO(user): Find a better test for never updated response.
+          *best = response;
+        } else if (maximize) {
+          // Update objective_value and best_objective_bound.
+          best->set_objective_value(
+              std::max(best->objective_value(), response.objective_value()));
+          best->set_best_objective_bound(std::min(
+              best->best_objective_bound(), response.best_objective_bound()));
+        } else {
+          best->set_objective_value(
+              std::min(best->objective_value(), response.objective_value()));
+          best->set_best_objective_bound(std::max(
+              best->best_objective_bound(), response.best_objective_bound()));
+        }
+      }
+      return false;
+      break;
+    }
+    default: { return false; }
+  }
 }
 
 }  // namespace sat

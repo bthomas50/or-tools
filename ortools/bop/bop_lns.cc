@@ -145,7 +145,7 @@ BopOptimizerBase::Status BopCompleteLNSOptimizer::Optimize(
 
   sat_solver_->SetParameters(sat_params);
   const sat::SatSolver::Status sat_status = sat_solver_->Solve();
-  if (sat_status == sat::SatSolver::MODEL_SAT) {
+  if (sat_status == sat::SatSolver::FEASIBLE) {
     SatAssignmentToBopSolution(sat_solver_->Assignment(),
                                &learned_info->solution);
     return BopOptimizerBase::SOLUTION_FOUND;
@@ -299,7 +299,7 @@ BopOptimizerBase::Status BopAdaptiveLNSOptimizer::Optimize(
           sat_propagator_->CurrentDecisionLevel());
 
       const sat::SatSolver::Status status = sat_propagator_->Solve();
-      if (status == sat::SatSolver::MODEL_SAT) {
+      if (status == sat::SatSolver::FEASIBLE) {
         adaptive_difficulty_.IncreaseParameter();
         SatAssignmentToBopSolution(sat_propagator_->Assignment(),
                                    &learned_info->solution);
@@ -386,7 +386,7 @@ BopOptimizerBase::Status BopAdaptiveLNSOptimizer::Optimize(
     // Solve the local problem.
     const sat::SatSolver::Status status = sat_solver.Solve();
     time_limit->AdvanceDeterministicTime(sat_solver.deterministic_time());
-    if (status == sat::SatSolver::MODEL_SAT) {
+    if (status == sat::SatSolver::FEASIBLE) {
       // We found a solution! abort now.
       SatAssignmentToBopSolution(sat_solver.Assignment(),
                                  &learned_info->solution);
@@ -435,7 +435,7 @@ void ObjectiveBasedNeighborhood::GenerateNeighborhood(
   std::vector<sat::Literal> candidates =
       ObjectiveVariablesAssignedToTheirLowCostValue(problem_state,
                                                     objective_terms_);
-  std::random_shuffle(candidates.begin(), candidates.end(), *random_);
+  std::shuffle(candidates.begin(), candidates.end(), *random_);
 
   // We will use the sat_propagator to fix some variables as long as the number
   // of propagated variables in the solver is under our target.
@@ -465,7 +465,7 @@ void ConstraintBasedNeighborhood::GenerateNeighborhood(
   const int num_constraints = problem.constraints_size();
   std::vector<int> ct_ids(num_constraints, 0);
   for (int ct_id = 0; ct_id < num_constraints; ++ct_id) ct_ids[ct_id] = ct_id;
-  std::random_shuffle(ct_ids.begin(), ct_ids.end(), *random_);
+  std::shuffle(ct_ids.begin(), ct_ids.end(), *random_);
 
   // Mark that we want to relax all the variables of these constraints as long
   // as the number of relaxed variable is lower than our difficulty target.

@@ -41,8 +41,8 @@ INT32_MAX = 2147483647
 # Cp Solver status (exported to avoid importing cp_model_cp2).
 UNKNOWN = cp_model_pb2.UNKNOWN
 MODEL_INVALID = cp_model_pb2.MODEL_INVALID
-MODEL_SAT = cp_model_pb2.MODEL_SAT
-MODEL_UNSAT = cp_model_pb2.MODEL_UNSAT
+FEASIBLE = cp_model_pb2.FEASIBLE
+INFEASIBLE = cp_model_pb2.INFEASIBLE
 OPTIMAL = cp_model_pb2.OPTIMAL
 
 # Variable selection strategy
@@ -349,6 +349,9 @@ class IntVar(IntegerExpression):
   def __repr__(self):
     return '%s(%s)' % (self.__var.name, DisplayBounds(self.__var.domain))
 
+  def name(self):
+    return self.__var.name
+
   def Not(self):
     for bound in self.__var.domain:
       if bound < 0 or bound > 1:
@@ -478,6 +481,9 @@ class IntervalVar(object):
           self.__ct.name, ShortName(self.__model, interval.start),
           ShortName(self.__model, interval.size),
           ShortName(self.__model, interval.end))
+
+    def name(self):
+      return self.__ct.name
 
 
 class CpModel(object):
@@ -1029,6 +1035,8 @@ class CpModel(object):
 
 def EvaluateIntegerExpression(expression, solution):
   """Evaluate an integer expression against a solution."""
+  if isinstance(expression, numbers.Integral):
+    return expression
   value = 0
   to_process = [(expression, 1)]
   while to_process:
@@ -1048,7 +1056,9 @@ def EvaluateIntegerExpression(expression, solution):
 
 def EvaluateBooleanExpression(literal, solution):
   """Evaluate an boolean expression against a solution."""
-  if isinstance(literal, IntVar) or isinstance(literal, _NotBooleanVariable):
+  if isinstance(literal, numbers.Integral):
+    return bool(literal)
+  elif isinstance(literal, IntVar) or isinstance(literal, _NotBooleanVariable):
     index = literal.Index()
     if index >= 0:
       return bool(solution.solution[index])

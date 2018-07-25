@@ -32,7 +32,7 @@ function installdotnetsdk(){
 		# Install dotnet sdk 2.1
 		sudo apt-get install apt-transport-https &&
 		sudo apt-get update -qq &&
-		sudo apt-get install -yqq dotnet-sdk-2.1.105
+		sudo apt-get install -yqq dotnet-sdk-2.1
 }
 
 ################
@@ -49,10 +49,8 @@ if [ "${BUILDER}" == make ]; then
 			if [ "${LANGUAGE}" == python ]; then
 				pyenv global system 3.6;
 				python3.6 -m pip install -q virtualenv wheel six;
-			elif [ "${LANGUAGE}" == csharp ]; then
-				installmono
-			elif [ "${LANGUAGE}" == fsharp ]; then
-				installmono
+			elif [ "${LANGUAGE}" == dotnet ]; then
+				#installmono
 				sudo apt-get -yqq install fsharp
 				installdotnetsdk
 			fi
@@ -63,19 +61,22 @@ if [ "${BUILDER}" == make ]; then
 		fi
 	elif [ "${TRAVIS_OS_NAME}" == osx ]; then
 		if [ "${DISTRO}" == native ]; then
+			brew update;
+			brew install make --with-default-names;
 			if [ "${LANGUAGE}" != cc ]; then
-				brew update;
 				brew install swig;
 			fi
 			if [ "${LANGUAGE}" == python ]; then
 				brew upgrade python;
-				python3.6 -m pip install -q virtualenv wheel six;
+				python3 -m pip install -q virtualenv wheel six;
 			elif [ "${LANGUAGE}" == java ]; then
 				brew cask install java;
-			elif [ "${LANGUAGE}" == csharp ] || [ "${LANGUAGE}" == fsharp ]; then
-				brew install mono
+			elif [ "${LANGUAGE}" == dotnet ]; then
+				#brew install mono;
+				# Installer changes path but won't be picked up in current terminal session
+				# Need to explicitly add location (see Makefile.fsharp.mk)
 				brew tap caskroom/cask
-				brew cask install dotnet-sdk
+				brew cask install dotnet-sdk;
 			fi
 		else
 			# MacOS Docker Makefile build:
@@ -92,6 +93,8 @@ if [ "${BUILDER}" == cmake ]; then
 	if [ "${TRAVIS_OS_NAME}" == linux ]; then
 		if [ "${DISTRO}" == native ]; then
 			installswig
+			pyenv global system 3.6;
+			python3.6 -m pip install -q virtualenv wheel six;
 		else
 			# Linux Docker CMake build:
 			echo "NOT SUPPORTED"

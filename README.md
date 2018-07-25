@@ -26,11 +26,11 @@ portable software suite for solving combinatorial optimization problems.
 
 The suite contains:
 * A constraint programming solver;
-* A linear programming solvers;
+* A linear programming solver;
 * Wrappers around commercial and other open source solvers, including mixed
 integer solvers;
 * Bin packing and knapsack algorithms;
-* Algorithms for the Traveling Salesman Problem and Vehicule Routing Problem;
+* Algorithms for the Traveling Salesman Problem and Vehicle Routing Problem;
 * Graph algorithms (shortest paths, min cost flow, max flow, linear sum
 assignment).
 
@@ -113,7 +113,7 @@ We also provide experimental CMake support.<br>Please check the
 The best way to learn how to use OR-Tools is to follow the tutorials in our
 developer guide:
 
-https://developers.google.com/optimization/introduction/using
+https://developers.google.com/optimization/introduction/get_started
 
 If you want to learn from code examples, take a look at the examples in the
 [examples](examples) directory.

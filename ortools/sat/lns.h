@@ -14,10 +14,14 @@
 #ifndef OR_TOOLS_SAT_LNS_H_
 #define OR_TOOLS_SAT_LNS_H_
 
+#include <cmath>
+#include <cstdint>
 #include <functional>
 #include <vector>
 
+#if !defined(__PORTABLE_PLATFORM__)
 #include "ortools/base/threadpool.h"
+#endif  // __PORTABLE_PLATFORM__
 
 namespace operations_research {
 namespace sat {
@@ -75,7 +79,7 @@ class AdaptiveParameterValue {
   }
 
   double value_;
-  int64 num_changes_ = 0;
+  int64_t num_changes_ = 0;
 };
 
 // ============================================================================
@@ -86,25 +90,38 @@ template <class StopFunction, class SolveNeighborhoodFunction>
 inline void OptimizeWithLNS(
     int num_threads, StopFunction stop_function,
     SolveNeighborhoodFunction generate_and_solve_function) {
-  int64 seed = 0;
+  int64_t seed = 0;
+#if !defined(__PORTABLE_PLATFORM__)
   while (!stop_function()) {
-    std::vector<std::function<void()>> update_functions(num_threads);
-    {
-      ThreadPool pool("Parallel_LNS", num_threads);
-      pool.StartWorkers();
-      for (int i = 0; i < num_threads; ++i) {
-        pool.Schedule(
-            [&update_functions, &generate_and_solve_function, i, seed]() {
-              update_functions[i] = generate_and_solve_function(seed + i);
-            });
+    if (num_threads > 1) {
+      std::vector<std::function<void()>> update_functions(num_threads);
+      {
+        ThreadPool pool("Parallel_LNS", num_threads);
+        pool.StartWorkers();
+        for (int i = 0; i < num_threads; ++i) {
+          pool.Schedule(
+              [&update_functions, &generate_and_solve_function, i, seed]() {
+                update_functions[i] = generate_and_solve_function(seed + i);
+              });
+        }
       }
-    }
 
-    seed += num_threads;
-    for (int i = 0; i < num_threads; ++i) {
-      update_functions[i]();
+      seed += num_threads;
+      for (int i = 0; i < num_threads; ++i) {
+        update_functions[i]();
+      }
+    } else {
+      std::function<void()> update_function =
+          generate_and_solve_function(seed++);
+      update_function();
     }
   }
+#else   // __PORTABLE_PLATFORM__
+  while (!stop_function()) {
+    std::function<void()> update_function = generate_and_solve_function(seed++);
+    update_function();
+  }
+#endif  // __PORTABLE_PLATFORM__
 }
 
 }  // namespace sat

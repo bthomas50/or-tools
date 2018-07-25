@@ -13,8 +13,11 @@
 
 #include "ortools/sat/integer_search.h"
 
+#include <cmath>
+
 #include "ortools/sat/linear_programming_constraint.h"
 #include "ortools/sat/sat_decision.h"
+#include "ortools/sat/util.h"
 
 namespace operations_research {
 namespace sat {
@@ -89,6 +92,23 @@ std::function<LiteralIndex()> SatSolverHeuristic(Model* model) {
   };
 }
 
+std::function<LiteralIndex()> RandomizeOnRestartSatSolverHeuristic(
+    Model* model) {
+  SatSolver* sat_solver = model->GetOrCreate<SatSolver>();
+  Trail* trail = model->GetOrCreate<Trail>();
+  SatDecisionPolicy* decision_policy = model->GetOrCreate<SatDecisionPolicy>();
+  return [sat_solver, trail, decision_policy, model] {
+    if (sat_solver->CurrentDecisionLevel() == 0) {
+      RandomizeDecisionHeuristic(model->GetOrCreate<ModelRandomGenerator>(),
+                                 model->GetOrCreate<SatParameters>());
+      decision_policy->ResetDecisionHeuristic();
+    }
+    const bool all_assigned = trail->Index() == sat_solver->NumVariables();
+    return all_assigned ? kNoLiteralIndex
+                        : decision_policy->NextBranch().Index();
+  };
+}
+
 std::function<LiteralIndex()> FollowHint(
     const std::vector<BooleanOrIntegerVariable>& vars,
     const std::vector<IntegerValue>& values, Model* model) {
@@ -105,6 +125,7 @@ std::function<LiteralIndex()> FollowHint(
         return Literal(vars[i].bool_var, value == 1).Index();
       } else {
         const IntegerVariable integer_var = vars[i].int_var;
+        if (integer_trail->IsCurrentlyIgnored(integer_var)) continue;
         const IntegerValue lb = integer_trail->LowerBound(integer_var);
         const IntegerValue ub = integer_trail->UpperBound(integer_var);
         if (lb == ub) continue;
@@ -222,7 +243,6 @@ std::function<LiteralIndex()> ExploitIntegerLpSolution(
           if (value > lb && value <= ub) {
             const Literal ge = encoder->GetOrCreateAssociatedLiteral(
                 IntegerLiteral::GreaterOrEqual(positive_var, value));
-            auto domain = (*model->GetOrCreate<IntegerDomains>())[positive_var];
             CHECK(!trail->Assignment().VariableIsAssigned(ge.Variable()));
             last_decision_followed_lp = true;
             return ge.Index();
@@ -268,16 +288,18 @@ SatSolver::Status SolveIntegerProblemWithLazyEncoding(
   const SatParameters& parameters = *(model->GetOrCreate<SatParameters>());
   switch (parameters.search_branching()) {
     case SatParameters::AUTOMATIC_SEARCH: {
+      std::function<LiteralIndex()> search;
+      if (parameters.randomize_search()) {
+        search = SequentialSearch(
+            {RandomizeOnRestartSatSolverHeuristic(model), next_decision});
+      } else {
+        search = SequentialSearch({SatSolverHeuristic(model), next_decision});
+      }
       if (parameters.exploit_integer_lp_solution()) {
-        return SolveProblemWithPortfolioSearch(
-            {ExploitIntegerLpSolution(
-                SequentialSearch({SatSolverHeuristic(model), next_decision}),
-                model)},
-            {SatSolverRestartPolicy(model)}, model);
+        search = ExploitIntegerLpSolution(search, model);
       }
       return SolveProblemWithPortfolioSearch(
-          {SequentialSearch({SatSolverHeuristic(model), next_decision})},
-          {SatSolverRestartPolicy(model)}, model);
+          {search}, {SatSolverRestartPolicy(model)}, model);
     }
     case SatParameters::FIXED_SEARCH: {
       // Not all Boolean might appear in next_decision(), so once there is no
@@ -356,9 +378,15 @@ SatSolver::Status SolveProblemWithPortfolioSearch(
     std::vector<std::function<LiteralIndex()>> decision_policies,
     std::vector<std::function<bool()>> restart_policies, Model* model) {
   const int num_policies = decision_policies.size();
-  if (num_policies == 0) return SatSolver::MODEL_SAT;
+  if (num_policies == 0) return SatSolver::FEASIBLE;
   CHECK_EQ(num_policies, restart_policies.size());
   SatSolver* const solver = model->GetOrCreate<SatSolver>();
+  const ObjectiveSynchronizationHelper* helper =
+      model->Get<ObjectiveSynchronizationHelper>();
+  const bool synchronize_objective =
+      solver->AssumptionLevel() == 0 && helper != nullptr &&
+      helper->get_external_bound != nullptr &&
+      helper->objective_var != kNoIntegerVariable;
 
   // Note that it is important to do the level-zero propagation if it wasn't
   // already done because EnqueueDecisionAndBackjumpOnConflict() assumes that
@@ -381,9 +409,34 @@ SatSolver::Status SolveProblemWithPortfolioSearch(
       policy_index = (policy_index + 1) % num_policies;
     }
 
+    // Check external objective, and restart if a better one is supplied.
+    // TODO(user): Maybe do not check this at each decision.
+    if (synchronize_objective) {
+      const double external_bound = helper->get_external_bound();
+      if (std::isfinite(external_bound)) {
+        IntegerValue best_bound(helper->UnscaledObjective(external_bound));
+        IntegerTrail* const integer_trail = model->GetOrCreate<IntegerTrail>();
+        if (best_bound <= integer_trail->UpperBound(helper->objective_var)) {
+          if (!solver->RestoreSolverToAssumptionLevel()) {
+            return solver->UnsatStatus();
+          }
+          DCHECK_EQ(solver->CurrentDecisionLevel(), 0);
+          if (!integer_trail->Enqueue(
+                  IntegerLiteral::LowerOrEqual(helper->objective_var,
+                                               best_bound - 1),
+                  {}, {})) {
+            return SatSolver::INFEASIBLE;
+          }
+          if (!solver->FinishPropagation()) {
+            return solver->UnsatStatus();
+          }
+        }
+      }
+    }
+
     // Get next decision, try to enqueue.
     const LiteralIndex decision = decision_policies[policy_index]();
-    if (decision == kNoLiteralIndex) return SatSolver::MODEL_SAT;
+    if (decision == kNoLiteralIndex) return SatSolver::FEASIBLE;
 
     // TODO(user): on some problems, this function can be quite long. Expand
     // so that we can check the time limit at each step?

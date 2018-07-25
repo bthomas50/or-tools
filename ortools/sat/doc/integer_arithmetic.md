@@ -12,22 +12,22 @@ Integer variables are discrete variables ranging over 64 bit signed integer
 values. When creating them, a domain must be given. The format of this domain is
 a flattened list of disjoint intervals.
 
--   To represent a continuous interval from 0 to 10, just pass a domain [0, 10].
+-   To represent a interval from 0 to 10, just pass a domain [0, 10].
 -   To represent a single value (5), create a domain [5, 5].
 -   From these, it is easy to represent an enumerated list of values [-5, -4,
     -3, 1, 3, 4, 5, 6] is encoded as [-5, -3, 1, 1, 3, 6].
--   to exclude a single value, use int64 min and max values as in [int64min, -1,
-    1, int64max].
+-   To exclude a single value, use int64min and int64max values as in [int64min,
+    4, 6, int64max].
 
 ## Linear constraints
 
-In **C++**, the only supported data structure is a linear constraints as in:
+In **C++**, the model supports linear constraints as in:
 
     sum (a_i * x_i) in domain
 
 Where domain uses the same encoding as integer variables.
 
-From this, usual modeling tricks can express general arithmetic constraints:
+From this, the usual modeling tricks can express general arithmetic constraints:
 
     x > y
 
@@ -40,15 +40,22 @@ can be rewritten as
 
 ## Rabbits and Pheasants examples
 
-Let's solve a trivial example from children logic quizzes.
+Let's solve a simple children's puzzle: the Rabbits and Pheasants problem.
 
-We see rabbits and pheasants, we see 20 heads, and 56 legs. How many rabbits and
-pheasants are there?
+WIn a field of rabbits and pheasants, there are 20 heads and 56 legs. How many
+rabbits and pheasants are there?
 
 ### Python code
 
 ```python
+"""Rabbits and Pheasants quizz."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 from ortools.sat.python import cp_model
+
 
 def RabbitsAndPheasants():
   """Solves the rabbits + pheasants problem."""
@@ -62,13 +69,15 @@ def RabbitsAndPheasants():
   # 56 legs.
   model.Add(4 * r + 2 * p == 56)
 
-  # Solves and print out the solutions.
-  # Creates a solver and solves the model.
+  # Solves and prints out the solution.
   solver = cp_model.CpSolver()
   status = solver.Solve(model)
 
-  if status == cp_model.MODEL_SAT:
+  if status == cp_model.FEASIBLE:
     print('%i rabbits and %i pheasants' % (solver.Value(r), solver.Value(p)))
+
+
+RabbitsAndPheasants()
 ```
 
 ### C++ code
@@ -76,8 +85,8 @@ def RabbitsAndPheasants():
 ```cpp
 #include "ortools/sat/cp_model.pb.h"
 #include "ortools/sat/cp_model_solver.h"
+#include "ortools/sat/cp_model_utils.h"
 #include "ortools/sat/model.h"
-#include "ortools/sat/sat_parameters.pb.h"
 
 namespace operations_research {
 namespace sat {
@@ -125,15 +134,21 @@ void RabbitsAndPheasants() {
   const CpSolverResponse response = SolveCpModel(cp_model, &model);
   LOG(INFO) << CpSolverResponseStats(response);
 
-  if (response.status() == CpSolverStatus::MODEL_SAT) {
+  if (response.status() == CpSolverStatus::FEASIBLE) {
     // Get the value of x in the solution.
     LOG(INFO) << response.solution(r) << " rabbits, and "
               << response.solution(p) << " pheasants";
   }
 }
 
-} // namespace sat
-} // namespace operations_research
+}  // namespace sat
+}  // namespace operations_research
+
+int main() {
+  operations_research::sat::RabbitsAndPheasants();
+
+  return EXIT_SUCCESS;
+}
 ```
 
 ### C\# code
@@ -160,7 +175,7 @@ public class CodeSamplesSat
     CpSolver solver = new CpSolver();
     CpSolverStatus status = solver.Solve(model);
 
-    if (status == CpSolverStatus.ModelSat)
+    if (status == CpSolverStatus.Feasible)
     {
       Console.WriteLine(solver.Value(r) + " rabbits, and " +
                         solver.Value(p) + " pheasants");
