@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -412,6 +412,18 @@ void BasisFactorization::LeftSolveForUnitRow(ColIndex j,
     tau_computation_can_be_optimized_ = false;
     lu_factorization_.LeftSolveLWithNonZeros(y, nullptr);
   }
+  y->SortNonZerosIfNeeded();
+}
+
+void BasisFactorization::TemporaryLeftSolveForUnitRow(ColIndex j,
+                                                      ScatteredRow* y) const {
+  CHECK(IsRefactorized());
+  SCOPED_TIME_STAT(&stats_);
+  RETURN_IF_NULL(y);
+  BumpDeterministicTimeForSolve(1);
+  ClearAndResizeVectorWithNonZeros(RowToColIndex(matrix_.num_rows()), y);
+  lu_factorization_.LeftSolveUForUnitRow(j, y);
+  lu_factorization_.LeftSolveLWithNonZeros(y, nullptr);
   y->SortNonZerosIfNeeded();
 }
 

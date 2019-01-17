@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,16 +16,14 @@
 #include <limits>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "absl/strings/str_format.h"
 #include "ortools/base/commandlineflags.h"
 #include "ortools/base/hash.h"
 #include "ortools/base/integral_types.h"
 #include "ortools/base/logging.h"
-#include "ortools/base/port.h"
-#include "ortools/base/stringprintf.h"
 #include "ortools/base/timer.h"
 #include "ortools/linear_solver/linear_solver.h"
 
@@ -337,7 +335,7 @@ MPSolver::ResultStatus CBCInterface::Solve(const MPSolverParameters& param) {
   osi_.setObjSense(maximize_ ? -1 : 1);
 
   sync_status_ = MODEL_SYNCHRONIZED;
-  VLOG(1) << StringPrintf("Model built in %.3f seconds.", timer.Get());
+  VLOG(1) << absl::StrFormat("Model built in %.3f seconds.", timer.Get());
 
   ResetBestObjectiveBound();
 
@@ -387,7 +385,7 @@ MPSolver::ResultStatus CBCInterface::Solve(const MPSolverParameters& param) {
   CHECK_NE(kBadReturnStatus, return_status);  // Should never happen according
                                               // to the CBC source
 
-  VLOG(1) << StringPrintf("Solved in %.3f seconds.", timer.Get());
+  VLOG(1) << absl::StrFormat("Solved in %.3f seconds.", timer.Get());
 
   // Check the status: optimal, infeasible, etc.
   int tmp_status = model.status();
@@ -524,7 +522,9 @@ void CBCInterface::SetPresolveMode(int value) {
       // CBC presolve is always on.
       break;
     }
-    default: { SetUnsupportedIntegerParam(MPSolverParameters::PRESOLVE); }
+    default: {
+      SetUnsupportedIntegerParam(MPSolverParameters::PRESOLVE);
+    }
   }
 }
 

@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,6 +18,10 @@ namespace util {
 
 inline Status InvalidArgumentError(const std::string& message) {
   return Status(error::INVALID_ARGUMENT, message);
+}
+
+inline Status UnimplementedError(const std::string& message) {
+  return Status(error::NOT_IMPLEMENTED, message);
 }
 
 }  // namespace util

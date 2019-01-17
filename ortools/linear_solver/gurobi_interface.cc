@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -19,16 +19,14 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "absl/strings/str_format.h"
 #include "ortools/base/commandlineflags.h"
 #include "ortools/base/integral_types.h"
 #include "ortools/base/logging.h"
 #include "ortools/base/map_util.h"
-#include "ortools/base/port.h"
-#include "ortools/base/stringprintf.h"
 #include "ortools/base/timer.h"
 #include "ortools/linear_solver/linear_solver.h"
 
@@ -82,6 +80,7 @@ class GurobiInterface : public MPSolverInterface {
   void SetObjectiveOffset(double value) override;
   // Clears the objective from all its terms.
   void ClearObjective() override;
+  bool CheckBestObjectiveBoundExists() const override;
 
   // ------ Query statistics on the solution and the solve ------
   // Number of simplex or interior-point iterations
@@ -109,8 +108,8 @@ class GurobiInterface : public MPSolverInterface {
   std::string SolverVersion() const override {
     int major, minor, technical;
     GRBversion(&major, &minor, &technical);
-    return StringPrintf("Gurobi library version %d.%d.%d\n", major, minor,
-                        technical);
+    return absl::StrFormat("Gurobi library version %d.%d.%d\n", major, minor,
+                           technical);
   }
 
   bool InterruptSolve() override {
@@ -169,7 +168,7 @@ class GurobiInterface : public MPSolverInterface {
   void CheckedGurobiCall(int err) const {
     CHECK_EQ(0, err) << "Fatal error with code " << err << ", due to "
                      << GRBgeterrormsg(env_);
-  }
+  };
 
   int SolutionCount() const;
 
@@ -186,7 +185,7 @@ GurobiInterface::GurobiInterface(MPSolver* const solver, bool mip)
       env_(nullptr),
       mip_(mip),
       current_solution_index_(0) {
-  int ret = GRBloadenv(&env_, nullptr);
+  const int ret = GRBloadenv(&env_, nullptr);
   if (ret != 0 || env_ == nullptr) {
     std::string err_msg = GRBgeterrormsg(env_);
     LOG(DFATAL) << "Error: could not create environment: " << err_msg;
@@ -323,6 +322,12 @@ int64 GurobiInterface::nodes() const {
     LOG(DFATAL) << "Number of nodes only available for discrete problems.";
     return kUnknownNumberOfNodes;
   }
+}
+
+bool GurobiInterface::CheckBestObjectiveBoundExists() const {
+  double value;
+  const int error = GRBgetdblattr(model_, GRB_DBL_ATTR_OBJBOUND, &value);
+  return error == 0;
 }
 
 // Returns the best objective bound. Only available for discrete problems.
@@ -661,10 +666,12 @@ MPSolver::ResultStatus GurobiInterface::Solve(const MPSolverParameters& param) {
   ExtractModel();
   // Sync solver.
   CheckedGurobiCall(GRBupdatemodel(model_));
-  VLOG(1) << StringPrintf("Model built in %.3f seconds.", timer.Get());
+  VLOG(1) << absl::StrFormat("Model built in %s.",
+                             absl::FormatDuration(timer.GetDuration()));
 
   // Set solution hints if any.
-  for (const std::pair<MPVariable*, double>& p : solver_->solution_hint_) {
+  for (const std::pair<const MPVariable*, double>& p :
+       solver_->solution_hint_) {
     CheckedGurobiCall(
         GRBsetdblattrelement(model_, "Start", p.first->index(), p.second));
   }
@@ -692,14 +699,15 @@ MPSolver::ResultStatus GurobiInterface::Solve(const MPSolverParameters& param) {
   if (status) {
     VLOG(1) << "Failed to optimize MIP." << GRBgeterrormsg(env_);
   } else {
-    VLOG(1) << StringPrintf("Solved in %.3f seconds.", timer.Get());
+    VLOG(1) << absl::StrFormat("Solved in %s.",
+                               absl::FormatDuration(timer.GetDuration()));
   }
 
   // Get the status.
   int optimization_status = 0;
   CheckedGurobiCall(
       GRBgetintattr(model_, GRB_INT_ATTR_STATUS, &optimization_status));
-  VLOG(1) << StringPrintf("Solution status %d.\n", optimization_status);
+  VLOG(1) << absl::StrFormat("Solution status %d.\n", optimization_status);
   const int solution_count = SolutionCount();
 
   switch (optimization_status) {

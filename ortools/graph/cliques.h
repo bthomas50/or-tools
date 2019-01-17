@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,7 +16,7 @@
 // See http://en.wikipedia.org/wiki/Bron-Kerbosch_algorithm
 // and
 // C. Bron and J. Kerbosch, Joep, "Algorithm 457: finding all cliques of an
-// undirected graph", CACM 16 (9): 575–577, 1973.
+// undirected graph", CACM 16 (9): 575-577, 1973.
 // http://dl.acm.org/citation.cfm?id=362367&bnc=1.
 //
 // Keywords: undirected graph, clique, clique cover, Bron, Kerbosch.
@@ -26,12 +26,11 @@
 
 #include <functional>
 #include <numeric>
-#include <unordered_set>
 #include <vector>
 
+#include "absl/strings/str_cat.h"
 #include "ortools/base/int_type.h"
 #include "ortools/base/int_type_indexed_vector.h"
-#include "ortools/base/join.h"
 #include "ortools/base/logging.h"
 #include "ortools/util/time_limit.h"
 

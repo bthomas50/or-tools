@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -12,7 +12,6 @@
 // limitations under the License.
 
 #include <atomic>
-#include <fstream>
 #include <string>
 #include <vector>
 
@@ -22,8 +21,6 @@
 #include "ortools/base/hash.h"
 #include "ortools/base/integral_types.h"
 #include "ortools/base/logging.h"
-#include "ortools/base/port.h"
-#include "ortools/base/stringprintf.h"
 #include "ortools/bop/bop_parameters.pb.h"
 #include "ortools/bop/integral_solver.h"
 #include "ortools/linear_solver/linear_solver.h"
@@ -162,7 +159,8 @@ MPSolver::ResultStatus BopInterface::Solve(const MPSolverParameters& param) {
                    << "Filling the missing positions with zeros...";
     }
     initial_solution.assign(glop::ColIndex(num_vars), glop::Fractional(0.0));
-    for (const std::pair<MPVariable*, double>& p : solver_->solution_hint_) {
+    for (const std::pair<const MPVariable*, double>& p :
+         solver_->solution_hint_) {
       initial_solution[glop::ColIndex(p.first->index())] =
           glop::Fractional(p.second);
     }

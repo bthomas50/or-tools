@@ -9,6 +9,7 @@ UNIX_GFLAGS_DIR ?= $(OR_TOOLS_TOP)/dependencies/install
 UNIX_GLOG_DIR ?= $(OR_TOOLS_TOP)/dependencies/install
 UNIX_PROTOBUF_DIR ?= $(OR_TOOLS_TOP)/dependencies/install
 UNIX_PROTOC_BINARY ?= $(UNIX_PROTOBUF_DIR)/bin/protoc
+UNIX_ABSL_DIR ?= $(OR_TOOLS_TOP)/dependencies/install
 UNIX_CBC_DIR ?= $(OR_TOOLS_TOP)/dependencies/install
 UNIX_CGL_DIR ?= $(UNIX_CBC_DIR)
 UNIX_CLP_DIR ?= $(UNIX_CBC_DIR)
@@ -18,9 +19,10 @@ UNIX_SWIG_BINARY ?= swig
 PROTOC_BINARY := $(shell $(WHICH) ${UNIX_PROTOC_BINARY})
 
 # Tags of dependencies to checkout.
-GFLAGS_TAG = 2.2.1
+GFLAGS_TAG = 2.2.2
 GLOG_TAG = 0.3.5
-PROTOBUF_TAG = 3.5.1
+PROTOBUF_TAG = 3.6.1
+ABSL_TAG = master
 CBC_TAG = 2.9.9
 CGL_TAG = 0.59.10
 CLP_TAG = 1.16.11
@@ -30,64 +32,92 @@ PATCHELF_TAG = 0.9
 
 # Main target.
 .PHONY: third_party # Build OR-Tools Prerequisite
-third_party: makefile_third_party build_third_party
+third_party: build_third_party
 
-.PHONY: third_party_check # Check if "make third_party" have been run or not
-third_party_check:
+.PHONY: third_party_check # Check if third parties are all found
+third_party_check: dependencies/check.log
+
+dependencies/check.log: Makefile.local
 ifeq ($(wildcard $(UNIX_GFLAGS_DIR)/include/gflags/gflags.h),)
 	$(error Third party GFlags files was not found! did you run 'make third_party' or set UNIX_GFLAGS_DIR ?)
 else
-	$(info GFLAGS found !)
+	$(info GFLAGS: found)
 endif
 ifeq ($(wildcard $(UNIX_GLOG_DIR)/include/glog/logging.h),)
 	$(error Third party GLog files was not found! did you run 'make third_party' or set UNIX_GLOG_DIR ?)
 else
-	$(info GLOG found !)
+	$(info GLOG: found)
 endif
 ifeq ($(wildcard $(UNIX_PROTOBUF_DIR)/include/google/protobuf/descriptor.h),)
 	$(error Third party Protobuf files was not found! did you run 'make third_party' or set UNIX_PROTOBUF_DIR ?)
 else
-	$(info PROTOBUF found !)
+	$(info PROTOBUF: found)
 endif
 ifeq ($(wildcard $(PROTOC_BINARY)),)
 	$(error Cannot find $(UNIX_PROTOC_BINARY). Please verify UNIX_PROTOC_BINARY)
 else
-	$(info PROTOC found !)
+	$(info PROTOC: found)
+endif
+ifeq ($(wildcard $(UNIX_ABSL_DIR)/include/absl/base/config.h),)
+	$(error Third party Abseil-cpp files was not found! did you run 'make third_party' or set UNIX_ABSL_DIR ?)
+else
+	$(info ABSEIL-CPP: found)
 endif
 ifeq ($(wildcard $(UNIX_COINUTILS_DIR)/include/coinutils/coin/CoinModel.hpp $(UNIX_COINUTILS_DIR)/include/coin/CoinModel.hpp),)
 	$(error Third party CoinUtils files was not found! did you run 'make third_party' or set UNIX_COINUTILS_DIR ?)
 else
-	$(info COINUTILS found !)
+	$(info COINUTILS: found)
 endif
 ifeq ($(wildcard $(UNIX_OSI_DIR)/include/osi/coin/OsiSolverInterface.hpp $(UNIX_OSI_DIR)/include/coin/OsiSolverInterface.hpp),)
 	$(error Third party Osi files was not found! did you run 'make third_party' or set UNIX_OSI_DIR ?)
 else
-	$(info OSI found !)
+	$(info OSI: found)
 endif
 ifeq ($(wildcard $(UNIX_CLP_DIR)/include/clp/coin/ClpModel.hpp $(UNIX_CLP_DIR)/include/coin/ClpSimplex.hpp),)
 	$(error Third party Clp files was not found! did you run 'make third_party' or set UNIX_CLP_DIR ?)
 else
-	$(info CLP found !)
+	$(info CLP: found)
 endif
 ifeq ($(wildcard $(UNIX_CGL_DIR)/include/cgl/coin/CglParam.hpp $(UNIX_CGL_DIR)/include/coin/CglParam.hpp),)
 	$(error Third party Cgl files was not found! did you run 'make third_party' or set UNIX_CGL_DIR ?)
 else
-	$(info CGL found !)
+	$(info CGL: found)
 endif
 ifeq ($(wildcard $(UNIX_CBC_DIR)/include/cbc/coin/CbcModel.hpp $(UNIX_CBC_DIR)/include/coin/CbcModel.hpp),)
 	$(error Third party Cbc files was not found! did you run 'make third_party' or set UNIX_CBC_DIR ?)
 else
-	$(info CBC found !)
+	$(info CBC: found)
 endif
-	$(info All third parties found !)
+# Optional dependencies
+ifndef UNIX_CPLEX_DIR
+	$(info CPLEX: not found)
+endif
+ifndef UNIX_GLPK_DIR
+	$(info GLPK: not found)
+endif
+ifndef UNIX_GUROBI_DIR
+	$(info GUROBI: not found)
+endif
+ifndef UNIX_SCIP_DIR
+	$(info SCIP: not found)
+else
+  ifeq ($(wildcard $(UNIX_SCIP_DIR)/include/scip/scip.h),)
+	$(error Third party SCIP files was not found! please check the path given to UNIX_SCIP_DIR)
+  else
+	$(info SCIP: found)
+  endif
+endif
+	$(TOUCH) $@
 
 .PHONY: build_third_party
 build_third_party: \
+ Makefile.local \
  archives_directory \
  install_deps_directories \
  build_gflags \
  build_glog \
  build_protobuf \
+ build_absl \
  build_cbc
 
 .PHONY: archives_directory
@@ -120,10 +150,61 @@ dependencies/install/include: | dependencies/install
 dependencies/install/include/coin: | dependencies/install/include
 	$(MKDIR_P) dependencies$Sinstall$Sinclude$Scoin
 
+######################
+##  Makefile.local  ##
+######################
+# Make sure that local file lands correctly across platforms
+Makefile.local: makefiles/Makefile.third_party.$(SYSTEM).mk
+	-$(DEL) Makefile.local
+	@echo Generating Makefile.local
+	@echo "# Define UNIX_SWIG_BINARY to use a custom version." >> Makefile.local
+	@echo "#   e.g. UNIX_SWIG_BINARY = /opt/swig-x.y.z/bin/swig" >> Makefile.local
+	@echo JAVA_HOME = $(JAVA_HOME)>> Makefile.local
+	@echo UNIX_PYTHON_VER = $(DETECTED_PYTHON_VERSION)>> Makefile.local
+	@echo >> Makefile.local
+	@echo "## OPTIONAL DEPENDENCIES ##" >> Makefile.local
+	@echo "# Define UNIX_CPLEX_DIR to use CPLEX" >> Makefile.local
+	@echo >> Makefile.local
+	@echo "# Define UNIX_GLPK_DIR to point to a compiled version of GLPK to use it" >> Makefile.local
+	@echo "#   e.g. UNIX_GLPK_DIR = /opt/glpk-x.y.z" >> Makefile.local
+	@echo >> Makefile.local
+	@echo "# Define UNIX_GUROBI_DIR and GUROBI_LIB_VERSION to use Gurobi" >> Makefile.local
+	@echo >> Makefile.local
+	@echo "# Define UNIX_SCIP_DIR to point to a compiled version of SCIP to use it ">> Makefile.local
+	@echo "#   e.g. UNIX_SCIP_DIR = <path>/scipoptsuite-6.0.0/scip" >> Makefile.local
+	@echo "#   On Mac OS X, compile scip with: " >> Makefile.local
+	@echo "#     make GMP=false READLINE=false TPI=tny ZIMPL=false" >> Makefile.local
+	@echo "#   On Linux, compile scip with: " >> Makefile.local
+	@echo "#     make GMP=false READLINE=false ZIMPL=false TPI=tny USRCFLAGS=-fPIC USRCXXFLAGS=-fPIC USRCPPFLAGS=-fPIC" >> Makefile.local
+	@echo >> Makefile.local
+	@echo "## REQUIRED DEPENDENCIES ##" >> Makefile.local
+	@echo "# By default they will be automatically built -> nothing to define" >> Makefile.local
+	@echo "# Define UNIX_GFLAGS_DIR to depend on external Gflags dynamic library" >> Makefile.local
+	@echo "#   e.g. UNIX_GFLAGS_DIR = /opt/gflags-x.y.z" >> Makefile.local
+	@echo >> Makefile.local
+	@echo "# Define UNIX_GLOG_DIR to depend on external Glog dynamic library" >> Makefile.local
+	@echo "#   e.g. UNIX_GLOG_DIR = /opt/glog-x.y.z" >> Makefile.local
+	@echo >> Makefile.local
+	@echo "# Define UNIX_PROTOBUF_DIR to depend on external Protobuf dynamic library" >> Makefile.local
+	@echo "#   e.g. UNIX_PROTOBUF_DIR = /opt/protobuf-x.y.z" >> Makefile.local
+	@echo "# Define UNIX_PROTOC_BINARY to use a custom version." >> Makefile.local
+	@echo "#   e.g. UNIX_PROTOC_BINARY = /opt/protoc-x.y.z/bin/protoc" >> Makefile.local
+	@echo "#   (default: UNIX_PROTOBUF_DIR/bin/protoc)" >> Makefile.local
+	@echo >> Makefile.local
+	@echo "# Define UNIX_CBC_DIR to depend on external CBC dynamic library" >> Makefile.local
+	@echo "#   e.g. UNIX_CBC_DIR = /opt/cbc-x.y.z" >> Makefile.local
+	@echo "#   If you use a splitted version of CBC you can also define:" >> Makefile.local
+	@echo "#     UNIX_CLP_DIR, UNIX_CGL_DIR, UNIX_OSI_DIR, UNIX_COINUTILS_DIR" >> Makefile.local
+	@echo "#   note: by default they all point to UNIX_CBC_DIR" >> Makefile.local
+	@echo >> Makefile.local
+	@echo "# note: You don't need to run \"make third_party\" if you only use external dependencies" >> Makefile.local
+	@echo "# i.e. you define all UNIX_GFLAGS_DIR, UNIX_GLOG_DIR, UNIX_PROTOBUF_DIR and UNIX_CBC_DIR" >> Makefile.local
+
 ##############
 ##  GFLAGS  ##
 ##############
 # This uses gflags cmake-based build.
+.PHONY: build_gflags
 build_gflags: dependencies/install/lib/libgflags.$L
 
 dependencies/install/lib/libgflags.$L: dependencies/sources/gflags-$(GFLAGS_TAG) | dependencies/install
@@ -143,21 +224,19 @@ dependencies/sources/gflags-$(GFLAGS_TAG): | dependencies/sources
 	git clone --quiet -b v$(GFLAGS_TAG) https://github.com/gflags/gflags.git dependencies/sources/gflags-$(GFLAGS_TAG)
 
 GFLAGS_INC = -I$(UNIX_GFLAGS_DIR)/include
+GFLAGS_SWIG = $(GFLAGS_INC)
 STATIC_GFLAGS_LNK = $(UNIX_GFLAGS_DIR)/lib/libgflags.a
 DYNAMIC_GFLAGS_LNK = -L$(UNIX_GFLAGS_DIR)/lib -lgflags
 
-ifeq ($(UNIX_GFLAGS_DIR), $(OR_TOOLS_TOP)/dependencies/install)
-DEPENDENCIES_LNK += $(DYNAMIC_GFLAGS_LNK)
-OR_TOOLS_LNK += $(DYNAMIC_GFLAGS_LNK)
-else
-DEPENDENCIES_LNK += $(DYNAMIC_GFLAGS_LNK)
-OR_TOOLS_LNK += $(DYNAMIC_GFLAGS_LNK)
-endif
+GFLAGS_LNK = $(DYNAMIC_GFLAGS_LNK)
+DEPENDENCIES_LNK += $(GFLAGS_LNK)
+OR_TOOLS_LNK += $(GFLAGS_LNK)
 
 ############
 ##  GLOG  ##
 ############
 # This uses glog cmake-based build.
+.PHONY: build_glog
 build_glog: dependencies/install/lib/libglog.$L
 
 dependencies/install/lib/libglog.$L: dependencies/install/lib/libgflags.$L dependencies/sources/glog-$(GLOG_TAG) | dependencies/install
@@ -177,21 +256,19 @@ dependencies/sources/glog-$(GLOG_TAG): | dependencies/sources
 	git clone --quiet -b v$(GLOG_TAG) https://github.com/google/glog.git dependencies/sources/glog-$(GLOG_TAG)
 
 GLOG_INC = -I$(UNIX_GLOG_DIR)/include
+GLOG_SWIG = $(GLOG_INC)
 STATIC_GLOG_LNK = $(UNIX_GLOG_DIR)/lib/libglog.a
 DYNAMIC_GLOG_LNK = -L$(UNIX_GLOG_DIR)/lib -lglog
 
-ifeq ($(UNIX_GLOG_DIR), $(OR_TOOLS_TOP)/dependencies/install)
-DEPENDENCIES_LNK += $(DYNAMIC_GLOG_LNK)
-OR_TOOLS_LNK += $(DYNAMIC_GLOG_LNK)
-else
-DEPENDENCIES_LNK += $(DYNAMIC_GLOG_LNK)
-OR_TOOLS_LNK += $(DYNAMIC_GLOG_LNK)
-endif
+GLOG_LNK = $(DYNAMIC_GLOG_LNK)
+DEPENDENCIES_LNK += $(GLOG_LNK)
+OR_TOOLS_LNK += $(GLOG_LNK)
 
 ################
 ##  Protobuf  ##
 ################
 # This uses Protobuf cmake-based build.
+.PHONY: build_protobuf
 build_protobuf: dependencies/install/lib/libprotobuf.$L
 
 dependencies/install/lib/libprotobuf.$L: dependencies/install/lib/libglog.$L dependencies/sources/protobuf-$(PROTOBUF_TAG) | dependencies/install
@@ -211,10 +288,11 @@ dependencies/sources/protobuf-$(PROTOBUF_TAG): patches/protobuf.patch | dependen
 	-$(DELREC) dependencies/sources/protobuf-$(PROTOBUF_TAG)
 	git clone --quiet -b v$(PROTOBUF_TAG) https://github.com/google/protobuf.git dependencies/sources/protobuf-$(PROTOBUF_TAG)
 	cd dependencies/sources/protobuf-$(PROTOBUF_TAG) && \
-    git apply $(OR_TOOLS_TOP)/patches/protobuf.patch
+    git apply "$(OR_TOOLS_TOP)/patches/protobuf-$(PROTOBUF_TAG).patch"
 
 # This is needed to find protocol buffers.
 PROTOBUF_INC = -I$(UNIX_PROTOBUF_DIR)/include
+PROTOBUF_SWIG = $(PROTOBUF_INC)
 PROTOBUF_PROTOC_INC = $(PROTOBUF_INC)
 # libprotobuf.a goes in a different subdirectory depending on the distribution
 # and architecture, eg. "lib/" or "lib64/" for Fedora and Centos,
@@ -229,13 +307,10 @@ _PROTOBUF_LIB_DIR = $(dir $(wildcard \
  $(UNIX_PROTOBUF_DIR)/lib/*/libprotobuf.$L))
 DYNAMIC_PROTOBUF_LNK = -L$(_PROTOBUF_LIB_DIR) -lprotobuf
 
-ifeq ($(UNIX_PROTOBUF_DIR), $(OR_TOOLS_TOP)/dependencies/install)
-DEPENDENCIES_LNK += $(DYNAMIC_PROTOBUF_LNK)
-OR_TOOLS_LNK += $(DYNAMIC_PROTOBUF_LNK)
-else
-DEPENDENCIES_LNK += $(DYNAMIC_PROTOBUF_LNK)
-OR_TOOLS_LNK += $(DYNAMIC_PROTOBUF_LNK)
-endif
+PROTOBUF_LNK = $(DYNAMIC_PROTOBUF_LNK)
+DEPENDENCIES_LNK += $(PROTOBUF_LNK)
+OR_TOOLS_LNK += $(PROTOBUF_LNK)
+
 # Define Protoc
 ifeq ($(PLATFORM),LINUX)
  PROTOC = \
@@ -246,14 +321,82 @@ DYLD_LIBRARY_PATH="$(UNIX_PROTOBUF_DIR)/lib":$(DYLD_LIBRARY_PATH) $(PROTOC_BINAR
 endif
 
 # Install Java protobuf
+#  - Compile generic message proto.
+#  - Compile duration.proto
 dependencies/install/lib/protobuf.jar: | dependencies/install/lib/libprotobuf.$L
 	cd dependencies/sources/protobuf-$(PROTOBUF_TAG)/java && \
  $(PROTOC) --java_out=core/src/main/java -I../src \
  ../src/google/protobuf/descriptor.proto
+	cd dependencies/sources/protobuf-$(PROTOBUF_TAG)/java && \
+ $(PROTOC) --java_out=core/src/main/java -I../src \
+ ../src/google/protobuf/duration.proto
 	cd dependencies/sources/protobuf-$(PROTOBUF_TAG)/java/core/src/main/java && \
- $(JAVAC_BIN) com/google/protobuf/*java
+ "$(JAVAC_BIN)" com/google/protobuf/*java
 	cd dependencies/sources/protobuf-$(PROTOBUF_TAG)/java/core/src/main/java && \
- $(JAR_BIN) cvf ../../../../../../../install/lib/protobuf.jar com/google/protobuf/*class
+ "$(JAR_BIN)" cvf ../../../../../../../install/lib/protobuf.jar com/google/protobuf/*class
+
+##################
+##  ABSEIL-CPP  ##
+##################
+# This uses abseil-cpp cmake-based build.
+build_absl: dependencies/install/lib/libabsl.$L
+
+dependencies/install/lib/libabsl.$L: dependencies/sources/abseil-cpp-$(ABSL_TAG) | dependencies/install
+	cd dependencies/sources/abseil-cpp-$(ABSL_TAG) && \
+  $(SET_COMPILER) $(CMAKE) -H. -Bbuild_cmake \
+    -DCMAKE_PREFIX_PATH="$(OR_TOOLS_TOP)/dependencies/install" \
+    -DBUILD_SHARED_LIBS=ON \
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DCMAKE_CXX_FLAGS="$(MAC_VERSION)" \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_INSTALL_PREFIX=../../install && \
+  $(CMAKE) --build build_cmake -- -j4 && \
+  $(CMAKE) --build build_cmake --target install
+
+dependencies/sources/abseil-cpp-$(ABSL_TAG): | dependencies/sources
+	-$(DELREC) dependencies/sources/abseil-cpp-$(ABSL_TAG)
+	git clone --quiet -b $(ABSL_TAG) https://github.com/abseil/abseil-cpp.git dependencies/sources/abseil-cpp-$(ABSL_TAG)
+	cd dependencies/sources/abseil-cpp-$(ABSL_TAG) && \
+ git reset --hard 45221cc
+	cd dependencies/sources/abseil-cpp-$(ABSL_TAG) && \
+ git apply "$(OR_TOOLS_TOP)/patches/abseil-cpp-$(ABSL_TAG).patch"
+	$(COPY) patches/absl-config.cmake	dependencies/sources/abseil-cpp-$(ABSL_TAG)/CMake
+
+ABSL_INC = -I$(UNIX_ABSL_DIR)/include
+ABSL_SWIG = $(ABSL_INC)
+STATIC_ABSL_LNK = $(UNIX_ABSL_DIR)/lib/libabsl.a
+_ABSL_LIB_DIR = $(dir $(wildcard \
+ $(UNIX_ABSL_DIR)/lib*/libabsl_base.$L \
+ $(UNIX_ABSL_DIR)/lib*/libabsl_base.$L@ \
+ $(UNIX_ABSL_DIR)/lib/*/libabsl_base.$L))
+DYNAMIC_ABSL_LNK = -L$(_ABSL_LIB_DIR) \
+-labsl_bad_any_cast \
+-labsl_bad_optional_access \
+-labsl_base \
+-labsl_container \
+-labsl_dynamic_annotations \
+-labsl_examine_stack \
+-labsl_failure_signal_handler \
+-labsl_hash \
+-labsl_int128 \
+-labsl_leak_check \
+-labsl_malloc_internal \
+-labsl_optional \
+-labsl_spinlock_wait \
+-labsl_stack_consumption \
+-labsl_stacktrace \
+-labsl_strings \
+-labsl_str_format_extension_internal \
+-labsl_str_format_internal \
+-labsl_symbolize \
+-labsl_synchronization \
+-labsl_throw_delegate \
+-labsl_time \
+-labsl_variant
+
+ABSL_LNK = $(DYNAMIC_ABSL_LNK)
+DEPENDENCIES_LNK += $(ABSL_LNK)
+OR_TOOLS_LNK += $(ABSL_LNK)
 
 ############################################
 ##  Install Patchelf on linux platforms.  ##
@@ -266,7 +409,7 @@ endif
 PATCHELF_SRCDIR = dependencies/sources/patchelf-$(PATCHELF_TAG)
 dependencies/install/bin/patchelf: $(PATCHELF_SRCDIR) | dependencies/install/bin
 	cd $(PATCHELF_SRCDIR) && ./configure \
-    --prefix=$(OR_ROOT_FULL)/dependencies/install
+    --prefix="$(OR_ROOT_FULL)/dependencies/install"
 	make -C $(PATCHELF_SRCDIR)
 	make install -C $(PATCHELF_SRCDIR)
 
@@ -277,10 +420,11 @@ $(PATCHELF_SRCDIR): | dependencies/sources
 ###################
 ##  COIN-OR-CBC  ##
 ###################
+.PHONY: build_cbc
 build_cbc: dependencies/install/lib/libCbc.$L
 
 CBC_SRCDIR = dependencies/sources/Cbc-$(CBC_TAG)
-dependencies/install/lib/libCbc.$L: dependencies/install/lib/libCgl.$L $(CBC_SRCDIR) $(PATCHELF)
+dependencies/install/lib/libCbc.$L: build_cgl $(CBC_SRCDIR) $(PATCHELF)
 	cd $(CBC_SRCDIR) && $(SET_COMPILER) ./configure \
     --prefix=$(OR_ROOT_FULL)/dependencies/install \
     --disable-debug \
@@ -342,14 +486,16 @@ STATIC_CBC_LNK = $(UNIX_CBC_DIR)/lib$(UNIX_CBC_COIN)/libCbcSolver.a \
           $(UNIX_CBC_DIR)/lib$(UNIX_CBC_COIN)/libOsiCbc.a \
           $(UNIX_CBC_DIR)/lib$(UNIX_CBC_COIN)/libCbc.a
 DYNAMIC_CBC_LNK = -L$(UNIX_CBC_DIR)/lib$(UNIX_CBC_COIN) -lCbcSolver -lCbc -lOsiCbc
+CBC_LNK = $(DYNAMIC_CBC_LNK)
 
 ###################
 ##  COIN-OR-CGL  ##
 ###################
+.PHONY: build_cgl
 build_cgl: dependencies/install/lib/libCgl.$L
 
 CGL_SRCDIR = dependencies/sources/Cgl-$(CGL_TAG)
-dependencies/install/lib/libCgl.$L: dependencies/install/lib/libClp.$L $(CGL_SRCDIR) $(PATCHELF)
+dependencies/install/lib/libCgl.$L: build_clp $(CGL_SRCDIR) $(PATCHELF)
 	cd $(CGL_SRCDIR) && $(SET_COMPILER) ./configure \
     --prefix=$(OR_ROOT_FULL)/dependencies/install \
     --disable-debug \
@@ -384,14 +530,16 @@ ifneq ($(wildcard $(UNIX_CGL_DIR)/lib/coin),)
 endif
 STATIC_CGL_LNK = $(UNIX_CGL_DIR)/lib$(UNIX_CGL_COIN)/libCgl.a
 DYNAMIC_CGL_LNK = -L$(UNIX_CGL_DIR)/lib$(UNIX_CGL_COIN) -lCgl
+CGL_LNK = $(DYNAMIC_CGL_LNK)
 
 ###################
 ##  COIN-OR-CLP  ##
 ###################
+.PHONY: build_clp
 build_clp: dependencies/install/lib/libClp.$L
 
 CLP_SRCDIR = dependencies/sources/Clp-$(CLP_TAG)
-dependencies/install/lib/libClp.$L: dependencies/install/lib/libOsi.$L $(CLP_SRCDIR) $(PATCHELF)
+dependencies/install/lib/libClp.$L: build_osi $(CLP_SRCDIR) $(PATCHELF)
 	cd $(CLP_SRCDIR) && $(SET_COMPILER) ./configure \
     --prefix=$(OR_ROOT_FULL)/dependencies/install \
     --disable-debug \
@@ -452,14 +600,16 @@ STATIC_CLP_LNK = $(UNIX_CBC_DIR)/lib$(UNIX_CLP_COIN)/libClpSolver.a \
           $(UNIX_CLP_DIR)/lib$(UNIX_CLP_COIN)/libOsiClp.a \
           $(UNIX_CLP_DIR)/lib$(UNIX_CLP_COIN)/libClp.a
 DYNAMIC_CLP_LNK = -L$(UNIX_CLP_DIR)/lib$(UNIX_CLP_COIN) -lClpSolver -lClp -lOsiClp
+CLP_LNK = $(DYNAMIC_CLP_LNK)
 
 ###################
 ##  COIN-OR-OSI  ##
 ###################
+.PHONY: build_osi
 build_osi: dependencies/install/lib/libOsi.$L
 
 OSI_SRCDIR = dependencies/sources/Osi-$(OSI_TAG)
-dependencies/install/lib/libOsi.$L: dependencies/install/lib/libCoinUtils.$L $(OSI_SRCDIR) $(PATCHELF)
+dependencies/install/lib/libOsi.$L: build_coinutils $(OSI_SRCDIR) $(PATCHELF)
 	cd $(OSI_SRCDIR) && $(SET_COMPILER) ./configure \
     --prefix=$(OR_ROOT_FULL)/dependencies/install \
     --disable-debug \
@@ -503,10 +653,12 @@ ifneq ($(wildcard $(UNIX_OSI_DIR)/lib/coin),)
 endif
 STATIC_OSI_LNK = $(UNIX_OSI_DIR)/lib$(UNIX_OSI_COIN)/libOsi.a
 DYNAMIC_OSI_LNK = -L$(UNIX_OSI_DIR)/lib$(UNIX_OSI_COIN) -lOsi
+OSI_LNK = $(DYNAMIC_OSI_LNK)
 
 #########################
 ##  COIN-OR-COINUTILS  ##
 #########################
+.PHONY: build_coinutils
 build_coinutils: dependencies/install/lib/libCoinUtils.$L
 
 COINUTILS_SRCDIR = dependencies/sources/CoinUtils-$(COINUTILS_TAG)
@@ -546,6 +698,7 @@ ifneq ($(wildcard $(UNIX_COINUTILS_DIR)/lib/coin),)
 endif
 STATIC_COINUTILS_LNK = $(UNIX_COINUTILS_DIR)/lib$(UNIX_COINUTILS_COIN)/libCoinUtils.a
 DYNAMIC_COINUTILS_LNK = -L$(UNIX_COINUTILS_DIR)/lib$(UNIX_COINUTILS_COIN) -lCoinUtils
+COINUTILS_LNK = $(DYNAMIC_COINUTILS_LNK)
 
 ############
 ##  COIN  ##
@@ -563,26 +716,15 @@ COIN_SWIG = \
   $(CLP_SWIG) \
   $(CGL_SWIG) \
   $(CBC_SWIG)
-STATIC_COIN_LNK = \
-  $(STATIC_CBC_LNK) \
-  $(STATIC_CGL_LNK) \
-  $(STATIC_CLP_LNK) \
-  $(STATIC_OSI_LNK) \
-  $(STATIC_COINUTILS_LNK)
-DYNAMIC_COIN_LNK = \
-  $(DYNAMIC_CBC_LNK) \
-  $(DYNAMIC_CGL_LNK) \
-  $(DYNAMIC_CLP_LNK) \
-  $(DYNAMIC_OSI_LNK) \
-  $(DYNAMIC_COINUTILS_LNK)
+COIN_LNK = \
+  $(CBC_LNK) \
+  $(CGL_LNK) \
+  $(CLP_LNK) \
+  $(OSI_LNK) \
+  $(COINUTILS_LNK)
 
-ifeq ($(UNIX_CBC_DIR), $(OR_TOOLS_TOP)/dependencies/install)
-DEPENDENCIES_LNK += $(DYNAMIC_COIN_LNK)
-OR_TOOLS_LNK += $(DYNAMIC_COIN_LNK)
-else
-DEPENDENCIES_LNK += $(DYNAMIC_COIN_LNK)
-OR_TOOLS_LNK += $(DYNAMIC_COIN_LNK)
-endif
+DEPENDENCIES_LNK += $(COIN_LNK)
+OR_TOOLS_LNK += $(COIN_LNK)
 
 ############
 ##  SWIG  ##
@@ -594,6 +736,7 @@ SWIG_BINARY = $(shell $(WHICH) $(UNIX_SWIG_BINARY))
 .PHONY: clean_third_party # Clean everything. Remember to also delete archived dependencies, i.e. in the event of download failure, etc.
 clean_third_party:
 	-$(DEL) Makefile.local
+	-$(DEL) dependencies/check.log
 	-$(DELREC) dependencies/archives/Cbc*
 	-$(DELREC) dependencies/archives/Cgl*
 	-$(DELREC) dependencies/archives/Clp*
@@ -603,7 +746,9 @@ clean_third_party:
 	-$(DELREC) dependencies/sources/gflags*
 	-$(DELREC) dependencies/sources/glog*
 	-$(DELREC) dependencies/sources/protobuf*
+	-$(DELREC) dependencies/sources/abseil-cpp*
 	-$(DELREC) dependencies/sources/google*
+	-$(DELREC) dependencies/sources/abseil-cpp*
 	-$(DELREC) dependencies/sources/Cbc*
 	-$(DELREC) dependencies/sources/Cgl*
 	-$(DELREC) dependencies/sources/Clp*
@@ -622,56 +767,6 @@ clean_third_party:
 	-$(DELREC) dependencies/sources/help2man*
 	-$(DELREC) dependencies/sources/patchelf*
 	-$(DELREC) dependencies/install
-
-# Create Makefile.local
-.PHONY: makefile_third_party
-makefile_third_party: Makefile.local
-
-Makefile.local: makefiles/Makefile.third_party.unix.mk
-	-$(DEL) Makefile.local
-	@echo Generating Makefile.local
-	@echo "# Define UNIX_SWIG_BINARY to use a custom version." >> Makefile.local
-	@echo "#   e.g. UNIX_SWIG_BINARY = /opt/swig-x.y.z/bin/swig" >> Makefile.local
-	@echo JAVA_HOME = $(JAVA_HOME)>> Makefile.local
-	@echo UNIX_PYTHON_VER = $(DETECTED_PYTHON_VERSION)>> Makefile.local
-	@echo >> Makefile.local
-	@echo "## OPTIONAL DEPENDENCIES ##" >> Makefile.local
-	@echo "# Define UNIX_CPLEX_DIR to use CPLEX" >> Makefile.local
-	@echo >> Makefile.local
-	@echo "# Define UNIX_GLPK_DIR to point to a compiled version of GLPK to use it" >> Makefile.local
-	@echo "#   e.g. UNIX_GLPK_DIR = /opt/glpk-x.y.z" >> Makefile.local
-	@echo >> Makefile.local
-	@echo "# Define UNIX_GUROBI_DIR and GUROBI_LIB_VERSION to use Gurobi" >> Makefile.local
-	@echo >> Makefile.local
-	@echo "# Define UNIX_SCIP_DIR to point to a compiled version of SCIP to use it ">> Makefile.local
-	@echo "#   e.g. UNIX_SCIP_DIR = <path>/scipoptsuite-4.0.1/scip" >> Makefile.local
-	@echo "#   On Mac OS X, compile scip with: " >> Makefile.local
-	@echo "#     make GMP=false READLINE=false TPI=tny" >> Makefile.local
-	@echo "#   On Linux, compile scip with: " >> Makefile.local
-	@echo "#     make GMP=false READLINE=false TPI=tny USRCFLAGS=-fPIC USRCXXFLAGS=-fPIC USRCPPFLAGS=-fPIC" >> Makefile.local
-	@echo >> Makefile.local
-	@echo "## REQUIRED DEPENDENCIES ##" >> Makefile.local
-	@echo "# By default they will be automatically built -> nothing to define" >> Makefile.local
-	@echo "# Define UNIX_GFLAGS_DIR to depend on external Gflags dynamic library" >> Makefile.local
-	@echo "#   e.g. UNIX_GFLAGS_DIR = /opt/gflags-x.y.z" >> Makefile.local
-	@echo >> Makefile.local
-	@echo "# Define UNIX_GLOG_DIR to depend on external Glog dynamic library" >> Makefile.local
-	@echo "#   e.g. UNIX_GLOG_DIR = /opt/glog-x.y.z" >> Makefile.local
-	@echo >> Makefile.local
-	@echo "# Define UNIX_PROTOBUF_DIR to depend on external Protobuf dynamic library" >> Makefile.local
-	@echo "#   e.g. UNIX_PROTOBUF_DIR = /opt/protobuf-x.y.z" >> Makefile.local
-	@echo "# Define UNIX_PROTOC_BINARY to use a custom version." >> Makefile.local
-	@echo "#   e.g. UNIX_PROTOC_BINARY = /opt/protoc-x.y.z/bin/protoc" >> Makefile.local
-	@echo "#   (default: UNIX_PROTOBUF_DIR/bin/protoc)" >> Makefile.local
-	@echo >> Makefile.local
-	@echo "# Define UNIX_CBC_DIR to depend on external CBC dynamic library" >> Makefile.local
-	@echo "#   e.g. UNIX_CBC_DIR = /opt/cbc-x.y.z" >> Makefile.local
-	@echo "#   If you use a splitted version of CBC you can also define:" >> Makefile.local
-	@echo "#     UNIX_CLP_DIR, UNIX_CGL_DIR, UNIX_OSI_DIR, UNIX_COINUTILS_DIR" >> Makefile.local
-	@echo "#   note: by default they all point to UNIX_CBC_DIR" >> Makefile.local
-	@echo >> Makefile.local
-	@echo "# note: You don't need to run \"make third_party\" if you only use external dependencies" >> Makefile.local
-	@echo "# i.e. you define all UNIX_GFLAGS_DIR, UNIX_GLOG_DIR, UNIX_PROTOBUF_DIR and UNIX_CBC_DIR" >> Makefile.local
 
 .PHONY: detect_third_party # Show variables used to find third party
 detect_third_party:

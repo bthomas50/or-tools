@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -141,6 +141,7 @@ class LinearRelaxation : public BopOptimizerBase {
   const BopParameters parameters_;
   int64 state_update_stamp_;
   bool lp_model_loaded_;
+  int num_full_solves_;
   glop::LinearProgram lp_model_;
   glop::LPSolver lp_solver_;
   double scaling_;

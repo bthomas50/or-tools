@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -28,6 +28,7 @@
 #include "ortools/glop/parameters.pb.h"
 #include "ortools/lp_data/lp_types.h"
 #include "ortools/sat/boolean_problem.h"
+#include "ortools/sat/integer.h"
 #include "ortools/sat/sat_base.h"
 #include "ortools/util/fp_utils.h"
 
@@ -67,6 +68,7 @@ bool ConvertMPModelProtoToCpModelProto(const MPModelProto& mp_model,
   int num_truncated_bounds = 0;
   int num_small_domains = 0;
   const int64 kSmallDomainSize = 1000;
+  const double kWantedCoefficientPrecision = 1e-6;
 
   // Add the variables.
   const int num_variables = mp_model.variable_size();
@@ -75,12 +77,33 @@ bool ConvertMPModelProtoToCpModelProto(const MPModelProto& mp_model,
     IntegerVariableProto* cp_var = cp_model->add_variables();
     cp_var->set_name(mp_var.name());
 
+    // Deal with the corner case of a domain far away from zero.
+    //
+    // TODO(user): We should deal with these case by shifting the domain so
+    // that it includes zero instead of just fixing the variable. But that is a
+    // bit of work as it requires some postsolve.
+    if (mp_var.lower_bound() > kMaxVariableBound) {
+      // Fix var to its lower bound.
+      ++num_truncated_bounds;
+      const int64 value = static_cast<int64>(std::round(mp_var.lower_bound()));
+      cp_var->add_domain(value);
+      cp_var->add_domain(value);
+      continue;
+    } else if (mp_var.upper_bound() < -kMaxVariableBound) {
+      // Fix var to its upper_bound.
+      ++num_truncated_bounds;
+      const int64 value = static_cast<int64>(std::round(mp_var.upper_bound()));
+      cp_var->add_domain(value);
+      cp_var->add_domain(value);
+      continue;
+    }
+
     // Note that we must process the lower bound first.
     for (const bool lower : {true, false}) {
       const double bound = lower ? mp_var.lower_bound() : mp_var.upper_bound();
       if (std::abs(bound) >= kMaxVariableBound) {
-        if (std::abs(bound) != kInfinity) ++num_truncated_bounds;
-        cp_var->add_domain(lower ? -kMaxVariableBound : kMaxVariableBound);
+        ++num_truncated_bounds;
+        cp_var->add_domain(bound < 0 ? -kMaxVariableBound : kMaxVariableBound);
         continue;
       }
 
@@ -98,10 +121,10 @@ bool ConvertMPModelProtoToCpModelProto(const MPModelProto& mp_model,
   }
 
   LOG_IF(WARNING, num_truncated_bounds > 0)
-      << num_truncated_bounds << " bounds where truncated to "
+      << num_truncated_bounds << " bounds were truncated to "
       << kMaxVariableBound << ".";
   LOG_IF(WARNING, num_small_domains > 0)
-      << num_small_domains << " continuous variable domain with less than "
+      << num_small_domains << " continuous variable domain with fewer than "
       << kSmallDomainSize << " values.";
 
   // Variables needed to scale the double coefficients into int64.
@@ -114,6 +137,11 @@ bool ConvertMPModelProtoToCpModelProto(const MPModelProto& mp_model,
   std::vector<double> coefficients;
   std::vector<double> lower_bounds;
   std::vector<double> upper_bounds;
+
+  // TODO(user): we could use up to kint64max here, but our code is not as
+  // defensive as it should be regarding integer overflow. So we use the
+  // precision of a double.
+  const int64 kScalingTarget = 1LL << 53;
 
   // Add the constraints. We scale each of them individually.
   for (const MPConstraintProto& mp_constraint : mp_model.constraint()) {
@@ -137,12 +165,22 @@ bool ConvertMPModelProtoToCpModelProto(const MPModelProto& mp_model,
       lower_bounds.push_back(var_proto.domain(0));
       upper_bounds.push_back(var_proto.domain(var_proto.domain_size() - 1));
     }
+    scaling_factor = GetBestScalingOfDoublesToInt64(
+        coefficients, lower_bounds, upper_bounds, kScalingTarget);
 
-    // TODO(user): we could use kint64max directly here if our constraint
-    // propagation code was a bit more careful about integer overflow.
-    GetBestScalingOfDoublesToInt64(coefficients, lower_bounds, upper_bounds,
-                                   kint64max / 2, &scaling_factor,
-                                   &relative_coeff_error, &scaled_sum_error);
+    // Returns the smallest factor of the form 2^i that gives us a relative
+    // coefficient precision of kWantedCoefficientPrecision and still make sure
+    // we will have no integer overflow.
+    //
+    // TODO(user): Make this faster.
+    double x = std::min(scaling_factor, 1.0);
+    for (; x <= scaling_factor; x *= 2) {
+      ComputeScalingErrors(coefficients, lower_bounds, upper_bounds, x,
+                           &relative_coeff_error, &scaled_sum_error);
+      if (relative_coeff_error < kWantedCoefficientPrecision) break;
+    }
+    scaling_factor = x;
+
     const int64 gcd = ComputeGcdOfRoundedDoubles(coefficients, scaling_factor);
     max_relative_coeff_error =
         std::max(relative_coeff_error, max_relative_coeff_error);
@@ -162,21 +200,25 @@ bool ConvertMPModelProtoToCpModelProto(const MPModelProto& mp_model,
     // Add the constraint bounds. Because we are sure the scaled constraint fit
     // on an int64, if the scaled bounds are too large, the constraint is either
     // always true or always false.
-    const Fractional lb = mp_constraint.lower_bound();
-    const Fractional scaled_lb =
-        std::round(lb * scaling_factor - scaled_sum_error);
+    Fractional lb = mp_constraint.lower_bound();
+    lb -= std::max(1.0, std::abs(lb)) * 1e-8;
+    const Fractional scaled_lb = std::ceil(lb * scaling_factor);
     if (lb == -kInfinity || scaled_lb <= kint64min) {
       arg->add_domain(kint64min);
     } else {
-      arg->add_domain(static_cast<int64>(scaled_lb) / gcd);
+      arg->add_domain(CeilRatio(IntegerValue(static_cast<int64>(scaled_lb)),
+                                IntegerValue(gcd))
+                          .value());
     }
-    const Fractional ub = mp_constraint.upper_bound();
-    const Fractional scaled_ub =
-        std::round(ub * scaling_factor + scaled_sum_error);
+    Fractional ub = mp_constraint.upper_bound();
+    ub += std::max(1.0, std::abs(ub)) * 1e-8;
+    const Fractional scaled_ub = std::floor(ub * scaling_factor);
     if (ub == kInfinity || scaled_ub >= kint64max) {
       arg->add_domain(kint64max);
     } else {
-      arg->add_domain(static_cast<int64>(scaled_ub) / gcd);
+      arg->add_domain(FloorRatio(IntegerValue(static_cast<int64>(scaled_ub)),
+                                 IntegerValue(gcd))
+                          .value());
     }
 
     // TODO(user): checks feasibility (contains zero) or support that in the
@@ -191,9 +233,7 @@ bool ConvertMPModelProtoToCpModelProto(const MPModelProto& mp_model,
           << max_scaled_sum_error;
   VLOG(1) << "Maximum constraint scaling factor: " << max_scaling_factor;
 
-  // Add the objective. We use kint64max / 2 because the objective_var will
-  // also be added to the objective constraint.
-  const int64 kMaxObjective = kint64max / 2;
+  // Add the objective.
   coefficients.clear();
   lower_bounds.clear();
   upper_bounds.clear();
@@ -206,9 +246,22 @@ bool ConvertMPModelProtoToCpModelProto(const MPModelProto& mp_model,
     upper_bounds.push_back(var_proto.domain(var_proto.domain_size() - 1));
   }
   if (!coefficients.empty() || mp_model.objective_offset() != 0.0) {
-    GetBestScalingOfDoublesToInt64(coefficients, lower_bounds, upper_bounds,
-                                   kMaxObjective, &scaling_factor,
-                                   &relative_coeff_error, &scaled_sum_error);
+    scaling_factor = GetBestScalingOfDoublesToInt64(
+        coefficients, lower_bounds, upper_bounds, kScalingTarget);
+
+    // Returns the smallest factor of the form 2^i that gives us a relative
+    // coefficient precision of kWantedCoefficientPrecision and still make sure
+    // we will have no integer overflow.
+    //
+    // TODO(user): Make this faster.
+    double x = std::min(scaling_factor, 1.0);
+    for (; x <= scaling_factor; x *= 2) {
+      ComputeScalingErrors(coefficients, lower_bounds, upper_bounds, x,
+                           &relative_coeff_error, &scaled_sum_error);
+      if (relative_coeff_error < kWantedCoefficientPrecision) break;
+    }
+    scaling_factor = x;
+
     const int64 gcd = ComputeGcdOfRoundedDoubles(coefficients, scaling_factor);
     max_relative_coeff_error =
         std::max(relative_coeff_error, max_relative_coeff_error);
@@ -241,10 +294,10 @@ bool ConvertMPModelProtoToCpModelProto(const MPModelProto& mp_model,
   }
 
   // Test the precision of the conversion.
-  const double kRelativeTolerance = 1e-2;
+  const double kRelativeTolerance = 1e-4;
   if (max_relative_coeff_error > kRelativeTolerance) {
     LOG(WARNING) << "The relative error during double -> int64 conversion "
-                 << "is too high!";
+                 << "is too high! error:" << max_relative_coeff_error;
     return false;
   }
   return true;

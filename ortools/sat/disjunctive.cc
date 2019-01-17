@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -52,37 +52,47 @@ std::function<void(Model*)> Disjunctive(
     GenericLiteralWatcher* watcher =
         model->GetOrCreate<GenericLiteralWatcher>();
 
-    // We decided to create the propagators in this particular order, but it
-    // shouldn't matter much because of the different priorities used.
-    {
-      // Only one direction is needed by this one.
-      DisjunctiveOverloadChecker* overload_checker =
-          new DisjunctiveOverloadChecker(true, helper);
-      const int id = overload_checker->RegisterWith(watcher);
-      watcher->SetPropagatorPriority(id, 1);
-      model->TakeOwnership(overload_checker);
+    if (vars.size() == 2) {
+      DisjunctiveWithTwoItems* propagator = new DisjunctiveWithTwoItems(helper);
+      propagator->RegisterWith(watcher);
+      model->TakeOwnership(propagator);
+    } else {
+      // We decided to create the propagators in this particular order, but it
+      // shouldn't matter much because of the different priorities used.
+      {
+        // Only one direction is needed by this one.
+        DisjunctiveOverloadChecker* overload_checker =
+            new DisjunctiveOverloadChecker(true, helper);
+        const int id = overload_checker->RegisterWith(watcher);
+        watcher->SetPropagatorPriority(id, 1);
+        model->TakeOwnership(overload_checker);
+      }
+      for (const bool time_direction : {true, false}) {
+        DisjunctiveDetectablePrecedences* detectable_precedences =
+            new DisjunctiveDetectablePrecedences(time_direction, helper);
+        const int id = detectable_precedences->RegisterWith(watcher);
+        watcher->SetPropagatorPriority(id, 2);
+        model->TakeOwnership(detectable_precedences);
+      }
+      for (const bool time_direction : {true, false}) {
+        DisjunctiveNotLast* not_last =
+            new DisjunctiveNotLast(time_direction, helper);
+        const int id = not_last->RegisterWith(watcher);
+        watcher->SetPropagatorPriority(id, 3);
+        model->TakeOwnership(not_last);
+      }
+      for (const bool time_direction : {true, false}) {
+        DisjunctiveEdgeFinding* edge_finding =
+            new DisjunctiveEdgeFinding(time_direction, helper);
+        const int id = edge_finding->RegisterWith(watcher);
+        watcher->SetPropagatorPriority(id, 4);
+        model->TakeOwnership(edge_finding);
+      }
     }
-    for (const bool time_direction : {true, false}) {
-      DisjunctiveDetectablePrecedences* detectable_precedences =
-          new DisjunctiveDetectablePrecedences(time_direction, helper);
-      const int id = detectable_precedences->RegisterWith(watcher);
-      watcher->SetPropagatorPriority(id, 2);
-      model->TakeOwnership(detectable_precedences);
-    }
-    for (const bool time_direction : {true, false}) {
-      DisjunctiveNotLast* not_last =
-          new DisjunctiveNotLast(time_direction, helper);
-      const int id = not_last->RegisterWith(watcher);
-      watcher->SetPropagatorPriority(id, 3);
-      model->TakeOwnership(not_last);
-    }
-    for (const bool time_direction : {true, false}) {
-      DisjunctiveEdgeFinding* edge_finding =
-          new DisjunctiveEdgeFinding(time_direction, helper);
-      const int id = edge_finding->RegisterWith(watcher);
-      watcher->SetPropagatorPriority(id, 4);
-      model->TakeOwnership(edge_finding);
-    }
+
+    // Note that we keep this one even when there is just two intervals. This is
+    // because it might push a variable that is after both of the intervals
+    // using the fact that they are in disjunction.
     if (model->GetOrCreate<SatParameters>()
             ->use_precedences_in_disjunctive_constraint()) {
       for (const bool time_direction : {true, false}) {
@@ -186,6 +196,69 @@ IntegerValue TaskSet::ComputeEndMin(int task_to_ignore,
   return end_min;
 }
 
+bool DisjunctiveWithTwoItems::Propagate() {
+  DCHECK_EQ(helper_->NumTasks(), 2);
+
+  // We can't propagate anything if one of the interval is absent for sure.
+  if (helper_->IsAbsent(0) || helper_->IsAbsent(1)) return true;
+
+  // Note that this propagation also take care of the "overload checker" part.
+  // It also propagates as much as possible, even in the presence of task with
+  // variable durations.
+  //
+  // TODO(user): For optional interval whose presense in unknown and without
+  // optional variable, the end-min may not be propagated to at least (start_min
+  // + duration_min). Consider that into the computation so we may decide the
+  // interval forced absence? Same for the start-max.
+  int task_before = 0;
+  int task_after = 1;
+  if (helper_->StartMax(0) < helper_->EndMin(1)) {
+    // Task 0 must be before task 1.
+  } else if (helper_->StartMax(1) < helper_->EndMin(0)) {
+    // Task 1 must be before task 0.
+    std::swap(task_before, task_after);
+  } else {
+    return true;
+  }
+
+  if (helper_->IsPresent(task_before) &&
+      helper_->StartMin(task_after) < helper_->EndMin(task_before)) {
+    // Reason for precedences if both present.
+    helper_->ClearReason();
+    helper_->AddReasonForBeingBefore(task_before, task_after);
+
+    // Reason for the bound push.
+    helper_->AddPresenceReason(task_before);
+    helper_->AddEndMinReason(task_before, helper_->EndMin(task_before));
+    if (!helper_->IncreaseStartMin(task_after, helper_->EndMin(task_before))) {
+      return false;
+    }
+  }
+
+  if (helper_->IsPresent(task_after) &&
+      helper_->EndMax(task_before) > helper_->StartMax(task_after)) {
+    // Reason for precedences if both present.
+    helper_->ClearReason();
+    helper_->AddReasonForBeingBefore(task_before, task_after);
+
+    // Reason for the bound push.
+    helper_->AddPresenceReason(task_after);
+    helper_->AddStartMaxReason(task_after, helper_->StartMax(task_after));
+    if (!helper_->DecreaseEndMax(task_before, helper_->StartMax(task_after))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+int DisjunctiveWithTwoItems::RegisterWith(GenericLiteralWatcher* watcher) {
+  // This propagator reach the fix point in one pass.
+  const int id = watcher->Register(this);
+  helper_->WatchAllTasks(id, watcher);
+  return id;
+}
+
 // TODO(user): Improve the Overload Checker using delayed insertion.
 // We insert events at the cost of O(log n) per insertion, and this is where
 // the algorithm spends most of its time, thus it is worth improving.
@@ -200,7 +273,7 @@ bool DisjunctiveOverloadChecker::Propagate() {
   event_to_task_.clear();
   event_time_.clear();
   int num_events = 0;
-  for (const auto task_time : helper_->TaskByIncreasingStartMin()) {
+  for (const auto task_time : helper_->TaskByIncreasingShiftedStartMin()) {
     const int task = task_time.task_index;
 
     // TODO(user): We need to take into account task with zero duration because
@@ -249,11 +322,11 @@ bool DisjunctiveOverloadChecker::Propagate() {
       const IntegerValue window_end =
           theta_tree_.GetEnvelopeOf(critical_event) - 1;
       for (int event = critical_event; event < num_events; event++) {
-        if (theta_tree_.EnergyMin(event) > 0) {
+        const IntegerValue energy_min = theta_tree_.EnergyMin(event);
+        if (energy_min > 0) {
           const int task = event_to_task_[event];
           helper_->AddPresenceReason(task);
-          helper_->AddDurationMinReason(task);
-          helper_->AddStartMinReason(task, window_start);
+          helper_->AddEnergyAfterReason(task, energy_min, window_start);
           helper_->AddEndMaxReason(task, window_end);
         }
       }
@@ -273,25 +346,30 @@ bool DisjunctiveOverloadChecker::Propagate() {
           current_end, &critical_event, &optional_event, &available_energy);
 
       const int optional_task = event_to_task_[optional_event];
+      const IntegerValue optional_duration_min =
+          helper_->DurationMin(optional_task);
       const IntegerValue window_start = event_time_[critical_event];
-      const IntegerValue window_end = current_end +
-                                      helper_->DurationMin(optional_task) -
-                                      available_energy - 1;
+      const IntegerValue window_end =
+          current_end + optional_duration_min - available_energy - 1;
       for (int event = critical_event; event < num_events; event++) {
-        if (theta_tree_.EnergyMin(event) > 0) {
+        const IntegerValue energy_min = theta_tree_.EnergyMin(event);
+        if (energy_min > 0) {
           const int task = event_to_task_[event];
           helper_->AddPresenceReason(task);
-          helper_->AddDurationMinReason(task);
-          helper_->AddStartMinReason(task, window_start);
+          helper_->AddEnergyAfterReason(task, energy_min, window_start);
           helper_->AddEndMaxReason(task, window_end);
         }
       }
 
-      helper_->AddDurationMinReason(optional_task);
-      helper_->AddStartMinReason(optional_task, window_start);
+      helper_->AddEnergyAfterReason(optional_task, optional_duration_min,
+                                    window_start);
       helper_->AddEndMaxReason(optional_task, window_end);
 
-      helper_->PushTaskAbsence(optional_task);  // This never fails.
+      // If tasks shares the same presence literal, it is possible that we
+      // already pushed this task absence.
+      if (!helper_->IsAbsent(optional_task)) {
+        if (!helper_->PushTaskAbsence(optional_task)) return false;
+      }
       theta_tree_.RemoveEvent(optional_event);
     }
   }
@@ -326,7 +404,7 @@ bool DisjunctiveDetectablePrecedences::Propagate() {
       const IntegerValue start_max = to_insert.time;
       if (end_min <= start_max) break;
       if (helper_->IsPresent(task_index)) {
-        task_set_.AddEntry({task_index, helper_->StartMin(task_index),
+        task_set_.AddEntry({task_index, helper_->ShiftedStartMin(task_index),
                             helper_->DurationMin(task_index)});
       }
       --queue_index;
@@ -356,11 +434,9 @@ bool DisjunctiveDetectablePrecedences::Propagate() {
         const int ct = sorted_tasks[i].task;
         if (ct == t) continue;
         DCHECK(helper_->IsPresent(ct));
-        DCHECK_GE(helper_->StartMin(ct), window_start);
-        DCHECK_LT(helper_->StartMax(ct), end_min);
         helper_->AddPresenceReason(ct);
-        helper_->AddDurationMinReason(ct);
-        helper_->AddStartMinReason(ct, window_start);
+        helper_->AddEnergyAfterReason(ct, sorted_tasks[i].duration_min,
+                                      window_start);
         helper_->AddStartMaxReason(ct, end_min - 1);
       }
 
@@ -378,7 +454,7 @@ bool DisjunctiveDetectablePrecedences::Propagate() {
       // its start (by opposition to an optional interval where the push might
       // not happen if its start is not optional).
       task_set_.NotifyEntryIsNowLastIfPresent(
-          {t, helper_->StartMin(t), helper_->DurationMin(t)});
+          {t, helper_->ShiftedStartMin(t), helper_->DurationMin(t)});
     }
   }
   return true;
@@ -403,46 +479,55 @@ bool DisjunctivePrecedences::Propagate() {
                                    task_is_currently_present_, &before_);
 
   // We don't care about the initial content of this vector.
-  reason_for_being_before_.resize(num_tasks, absl::InlinedVector<Literal, 6>());
+  task_to_arc_index_.resize(num_tasks);
   int critical_index;
   const int size = before_.size();
   for (int i = 0; i < size;) {
     const IntegerVariable var = before_[i].var;
     DCHECK_NE(var, kNoIntegerVariable);
     task_set_.Clear();
+    const int initial_i = i;
+    IntegerValue min_offset = before_[i].offset;
     for (; i < size && before_[i].var == var; ++i) {
       const int task = before_[i].index;
-      reason_for_being_before_[task] = before_[i].reason;
+      min_offset = std::min(min_offset, before_[i].offset);
       task_set_.AddUnsortedEntry(
-          {task, helper_->StartMin(task), helper_->DurationMin(task)});
+          {task, helper_->ShiftedStartMin(task), helper_->DurationMin(task)});
     }
-    if (task_set_.SortedTasks().size() < 2) continue;
+    DCHECK_GE(task_set_.SortedTasks().size(), 2);
     if (integer_trail_->IsCurrentlyIgnored(var)) continue;
     task_set_.Sort();
 
-    const IntegerValue end_min =
-        task_set_.ComputeEndMin(/*task_to_ignore=*/-1, &critical_index);
-    if (end_min > integer_trail_->LowerBound(var)) {
+    // TODO(user): Only use the min_offset of the critical task? Or maybe do a
+    // more general computation to find by how much we can push var?
+    const IntegerValue new_lb =
+        task_set_.ComputeEndMin(/*task_to_ignore=*/-1, &critical_index) +
+        min_offset;
+    if (new_lb > integer_trail_->LowerBound(var)) {
       const std::vector<TaskSet::Entry>& sorted_tasks = task_set_.SortedTasks();
       helper_->ClearReason();
+
+      // Fill task_to_arc_index_ since we need it for the reason.
+      for (int j = initial_i; j < i; ++j) {
+        task_to_arc_index_[before_[j].index] = before_[j].arc_index;
+      }
 
       const IntegerValue window_start = sorted_tasks[critical_index].start_min;
       for (int i = critical_index; i < sorted_tasks.size(); ++i) {
         const int ct = sorted_tasks[i].task;
         DCHECK(helper_->IsPresent(ct));
-        DCHECK_GE(helper_->StartMin(ct), window_start);
         helper_->AddPresenceReason(ct);
-        helper_->AddDurationMinReason(ct);
-        helper_->AddStartMinReason(ct, window_start);
-        for (const Literal l : reason_for_being_before_[ct]) {
-          helper_->MutableLiteralReason()->push_back(l.Negated());
-        }
+        helper_->AddEnergyAfterReason(ct, sorted_tasks[i].duration_min,
+                                      window_start);
+        precedences_->AddPrecedenceReason(task_to_arc_index_[ct], min_offset,
+                                          helper_->MutableLiteralReason(),
+                                          helper_->MutableIntegerReason());
       }
 
       // TODO(user): If var is actually a start-min of an interval, we
       // could push the end-min and check the interval consistency right away.
       if (!helper_->PushIntegerLiteral(
-              IntegerLiteral::GreaterOrEqual(var, end_min))) {
+              IntegerLiteral::GreaterOrEqual(var, new_lb))) {
         return false;
       }
     }
@@ -483,7 +568,7 @@ bool DisjunctiveNotLast::Propagate() {
       const IntegerValue start_max = to_insert.time;
       if (end_max <= start_max) break;
       if (helper_->IsPresent(task_index)) {
-        task_set_.AddEntry({task_index, helper_->StartMin(task_index),
+        task_set_.AddEntry({task_index, helper_->ShiftedStartMin(task_index),
                             helper_->DurationMin(task_index)});
       }
       --queue_index;
@@ -530,8 +615,8 @@ bool DisjunctiveNotLast::Propagate() {
         const int ct = sorted_tasks[i].task;
         if (ct == t) continue;
         helper_->AddPresenceReason(ct);
-        helper_->AddDurationMinReason(ct);
-        helper_->AddStartMinReason(ct, window_start);
+        helper_->AddEnergyAfterReason(ct, sorted_tasks[i].duration_min,
+                                      window_start);
         helper_->AddStartMaxReason(ct, largest_ct_start_max);
       }
 
@@ -571,9 +656,10 @@ bool DisjunctiveEdgeFinding::Propagate() {
   non_gray_task_to_event_.resize(num_tasks);
   event_to_task_.clear();
   event_time_.clear();
+  event_size_.clear();
   int num_events = 0;
   int num_not_gray = 0;
-  for (const auto task_time : helper_->TaskByIncreasingStartMin()) {
+  for (const auto task_time : helper_->TaskByIncreasingShiftedStartMin()) {
     const int task = task_time.task_index;
     if (helper_->IsAbsent(task)) {
       // Even though we completely ignore absent tasks, we still mark them as
@@ -586,6 +672,7 @@ bool DisjunctiveEdgeFinding::Propagate() {
 
     // We already mark all the non-present task as gray.
     const IntegerValue energy_min = helper_->DurationMin(task);
+    event_size_.push_back(energy_min);
     if (helper_->IsPresent(task)) {
       ++num_not_gray;
       is_gray_[task] = false;
@@ -630,8 +717,7 @@ bool DisjunctiveEdgeFinding::Propagate() {
         const int task = event_to_task_[event];
         if (is_gray_[task]) continue;
         helper_->AddPresenceReason(task);
-        helper_->AddDurationMinReason(task);
-        helper_->AddStartMinReason(task, window_start);
+        helper_->AddEnergyAfterReason(task, event_size_[event], window_start);
         helper_->AddEndMaxReason(task, window_end);
       }
       return helper_->ReportConflict();
@@ -654,65 +740,44 @@ bool DisjunctiveEdgeFinding::Propagate() {
           non_gray_end_max, &critical_event_with_gray, &gray_event,
           &available_energy);
       const int gray_task = event_to_task_[gray_event];
-      const IntegerValue gray_start_min = helper_->StartMin(gray_task);
 
       // Since the gray task is after all the other, we have a new lower bound.
       CHECK(is_gray_[gray_task]);
-      if (gray_start_min < non_gray_end_min) {
-        helper_->ClearReason();
-
+      if (helper_->StartMin(gray_task) < non_gray_end_min) {
         // The API is not ideal here. We just want the start of the critical
         // tasks that explain the non_gray_end_min computed above.
         const int critical_event =
             theta_tree_.GetMaxEventWithEnvelopeGreaterThan(non_gray_end_min -
                                                            1);
-        const IntegerValue critical_event_start = event_time_[critical_event];
+        const int first_event =
+            std::min(critical_event, critical_event_with_gray);
+        const int second_event =
+            std::max(critical_event, critical_event_with_gray);
+        const IntegerValue first_start = event_time_[first_event];
+        const IntegerValue second_start = event_time_[second_event];
 
-        // The explanation is a bit tricky, we consider two cases.
-        int first_event;
-        IntegerValue window_start;
-        IntegerValue window_end;
-        if (gray_start_min >= critical_event_start) {
-          // In this case, if the gray task is not last amongst the tasks
-          // contributing to the max envelope, we have an overload in the
-          // window:
-          first_event = critical_event;
-          window_start = critical_event_start;
-          window_end = non_gray_end_min + helper_->DurationMin(gray_task) - 1;
-
-          // Note that the explanation above also explain the max envelope, so
-          // we don't need anything else.
-        } else {
-          // In this case, to explain the overload we need the window below.
-          // Note that window_end is chosen to be has big as possible and still
-          // have an overload if the gray task is not last.
-          CHECK_LT(critical_event_with_gray, critical_event);
-          first_event = critical_event_with_gray;
-          window_start = event_time_[critical_event_with_gray];
-          window_end = non_gray_end_max + helper_->DurationMin(gray_task) -
-                       available_energy - 1;
-
-          // Moreover, to push the gray task as much as possible, we also need
-          // the subset of non-gray task after critical_event to start after
-          // critical_event_start.
-        }
+        // window_end is chosen to be has big as possible and still have an
+        // overload if the gray task is not last.
+        const IntegerValue window_end =
+            non_gray_end_max + event_size_[gray_event] - available_energy - 1;
+        CHECK_GE(window_end, non_gray_end_max);
 
         // The non-gray part of the explanation as detailed above.
+        helper_->ClearReason();
         for (int event = first_event; event < num_events; event++) {
           const int task = event_to_task_[event];
           if (is_gray_[task]) continue;
           helper_->AddPresenceReason(task);
-          helper_->AddDurationMinReason(task);
-          helper_->AddStartMinReason(task, event >= critical_event
-                                               ? critical_event_start
-                                               : window_start);
+          helper_->AddEnergyAfterReason(
+              task, event_size_[event],
+              event >= second_event ? second_start : first_start);
           helper_->AddEndMaxReason(task, window_end);
         }
 
         // Add the reason for the gray_task (we don't need the end-max or
         // presence reason).
-        helper_->AddDurationMinReason(gray_task);
-        helper_->AddStartMinReason(gray_task, window_start);
+        helper_->AddEnergyAfterReason(gray_task, event_size_[gray_event],
+                                      event_time_[critical_event_with_gray]);
 
         // Enqueue the new start-min for gray_task.
         //
@@ -738,7 +803,7 @@ bool DisjunctiveEdgeFinding::Propagate() {
       is_gray_[new_gray_task] = true;
       theta_tree_.AddOrUpdateOptionalEvent(new_gray_event,
                                            event_time_[new_gray_event],
-                                           helper_->DurationMin(new_gray_task));
+                                           event_size_[new_gray_event]);
     }
     ++end_max_index;
     --num_not_gray;

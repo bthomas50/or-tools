@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -188,6 +188,7 @@ class DisjunctiveEdgeFinding : public PropagatorInterface {
   std::vector<int> non_gray_task_to_event_;
   std::vector<int> event_to_task_;
   std::vector<IntegerValue> event_time_;
+  std::vector<IntegerValue> event_size_;
 
   std::vector<bool> is_gray_;
 };
@@ -218,8 +219,23 @@ class DisjunctivePrecedences : public PropagatorInterface {
 
   TaskSet task_set_;
   std::vector<bool> task_is_currently_present_;
-  std::vector<absl::InlinedVector<Literal, 6>> reason_for_being_before_;
+  std::vector<int> task_to_arc_index_;
   std::vector<PrecedencesPropagator::IntegerPrecedences> before_;
+};
+
+// This is an optimization for the case when we have a big number of such
+// pairwise constraints. This should be roughtly equivalent to what the general
+// disjunctive case is doing, but it dealt with variable size better and has a
+// lot less overhead.
+class DisjunctiveWithTwoItems : public PropagatorInterface {
+ public:
+  explicit DisjunctiveWithTwoItems(SchedulingConstraintHelper* helper)
+      : helper_(helper) {}
+  bool Propagate() final;
+  int RegisterWith(GenericLiteralWatcher* watcher);
+
+ private:
+  SchedulingConstraintHelper* helper_;
 };
 
 }  // namespace sat

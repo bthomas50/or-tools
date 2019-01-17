@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -13,15 +13,12 @@
 
 #include "ortools/data/set_covering_parser.h"
 
+#include "absl/strings/numbers.h"
+#include "absl/strings/str_split.h"
 #include "ortools/base/filelineiter.h"
-#include "ortools/base/numbers.h"
-#include "ortools/base/split.h"
-#include "ortools/base/strtoint.h"
 
 namespace operations_research {
 namespace scp {
-
-using ::absl::delimiter::AnyOf;
 
 ScpParser::ScpParser() : section_(INIT), line_(0), remaining_(0), current_(0) {}
 
@@ -43,15 +40,15 @@ void ScpParser::ProcessLine(const std::string& line, Format format,
                             ScpData* data) {
   line_++;
   const std::vector<std::string> words =
-      absl::StrSplit(line, AnyOf(" :\t\r"), absl::SkipEmpty());
+      absl::StrSplit(line, absl::ByAnyChar(" :\t\r"), absl::SkipEmpty());
   switch (section_) {
     case INIT: {
       if (words.size() != 2) {
         LogError(line, "Problem reading the size of the problem");
         return;
       }
-      const int num_rows = atoi32(words[0]);
-      const int num_columns = atoi32(words[1]);
+      const int num_rows = strtoint32(words[0]);
+      const int num_columns = strtoint32(words[1]);
       data->SetProblemSize(num_rows, num_columns);
       current_ = 0;
       switch (format) {
@@ -82,7 +79,7 @@ void ScpParser::ProcessLine(const std::string& line, Format format,
         return;
       }
       for (int i = 0; i < num_items; ++i) {
-        data->SetColumnCost(current_++, atoi32(words[i]));
+        data->SetColumnCost(current_++, strtoint32(words[i]));
       }
       if (current_ == data->num_columns()) {
         section_ = NUM_COLUMNS_IN_ROW;
@@ -103,15 +100,15 @@ void ScpParser::ProcessLine(const std::string& line, Format format,
             LogError(line, "Column declaration too short");
             return;
           }
-          const int cost = atoi32(words[0]);
+          const int cost = strtoint32(words[0]);
           data->SetColumnCost(current_, cost);
-          const int num_items = atoi32(words[1]);
+          const int num_items = strtoint32(words[1]);
           if (words.size() != 2 + num_items) {
             LogError(line, "Mistatch in column declaration");
             return;
           }
           for (int i = 0; i < num_items; ++i) {
-            const int row = atoi32(words[i + 2]) - 1;  // 1 based.
+            const int row = strtoint32(words[i + 2]) - 1;  // 1 based.
             data->AddRowInColumn(row, current_);
           }
           current_++;
@@ -127,7 +124,7 @@ void ScpParser::ProcessLine(const std::string& line, Format format,
           }
           data->SetColumnCost(current_, 1);
           for (int i = 0; i < 3; ++i) {
-            const int row = atoi32(words[i]) - 1;  // 1 based.
+            const int row = strtoint32(words[i]) - 1;  // 1 based.
             data->AddRowInColumn(row, current_);
           }
           current_++;
@@ -144,7 +141,7 @@ void ScpParser::ProcessLine(const std::string& line, Format format,
         LogError(line, "The header of a column should be one number");
         return;
       }
-      remaining_ = atoi32(words[0]);
+      remaining_ = strtoint32(words[0]);
       section_ = ROW;
       break;
     }
@@ -156,7 +153,7 @@ void ScpParser::ProcessLine(const std::string& line, Format format,
       }
       for (const std::string& w : words) {
         remaining_--;
-        const int column = atoi32(w) - 1;  // 1 based.
+        const int column = strtoint32(w) - 1;  // 1 based.
         data->AddRowInColumn(current_, column);
       }
       if (remaining_ == 0) {
@@ -190,6 +187,18 @@ void ScpParser::LogError(const std::string& line, const std::string& message) {
   LOG(ERROR) << "Error on line " << line_ << ": " << message << "(" << line
              << ")";
   section_ = ERROR;
+}
+
+int ScpParser::strtoint32(const std::string& word) {
+  int result;
+  CHECK(absl::SimpleAtoi(word, &result));
+  return result;
+}
+
+int64 ScpParser::strtoint64(const std::string& word) {
+  int64 result;
+  CHECK(absl::SimpleAtoi(word, &result));
+  return result;
 }
 
 }  // namespace scp

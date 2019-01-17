@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -309,14 +309,15 @@ class CompactSparseMatrix {
   // Adds a dense column to the CompactSparseMatrix (only the non-zero will be
   // actually stored). This work in O(input.size()) and returns the index of the
   // added column.
-  ColIndex AddDenseColumn(const DenseColumn& input);
+  ColIndex AddDenseColumn(const DenseColumn& dense_column);
 
   // Same as AddDenseColumn(), but only adds the non-zero from the given start.
-  ColIndex AddDenseColumnPrefix(const DenseColumn& input, RowIndex start);
+  ColIndex AddDenseColumnPrefix(const DenseColumn& dense_column,
+                                RowIndex start);
 
   // Same as AddDenseColumn(), but uses the given non_zeros pattern of input.
   // If non_zeros is empty, this actually calls AddDenseColumn().
-  ColIndex AddDenseColumnWithNonZeros(const DenseColumn& input,
+  ColIndex AddDenseColumnWithNonZeros(const DenseColumn& dense_column,
                                       const std::vector<RowIndex>& non_zeros);
 
   // Adds a dense column for which we know the non-zero positions and clears it.

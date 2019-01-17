@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,11 +16,12 @@
 #include <string>
 #include <vector>
 
+#include "absl/memory/memory.h"
+#include "absl/strings/str_format.h"
 #include "google/protobuf/text_format.h"
 #include "ortools/algorithms/sparse_permutation.h"
 #include "ortools/base/commandlineflags.h"
 #include "ortools/base/stl_util.h"
-#include "ortools/base/stringprintf.h"
 #include "ortools/glop/lp_solver.h"
 #include "ortools/lp_data/lp_print_utils.h"
 #include "ortools/sat/boolean_problem.h"
@@ -92,7 +93,7 @@ BopOptimizerBase::Status GuidedSatFirstSolutionGenerator::SynchronizeIfNeeded(
 
   // Create the sat_solver if not already done.
   if (!sat_solver_) {
-    sat_solver_.reset(new sat::SatSolver());
+    sat_solver_ = absl::make_unique<sat::SatSolver>();
 
     // Add in symmetries.
     if (problem_state.GetParameters()
@@ -340,6 +341,7 @@ LinearRelaxation::LinearRelaxation(const BopParameters& parameters,
       parameters_(parameters),
       state_update_stamp_(ProblemState::kInitialStampValue),
       lp_model_loaded_(false),
+      num_full_solves_(0),
       lp_model_(),
       lp_solver_(),
       scaling_(1),
@@ -356,6 +358,14 @@ BopOptimizerBase::Status LinearRelaxation::SynchronizeIfNeeded(
     return BopOptimizerBase::CONTINUE;
   }
   state_update_stamp_ = problem_state.update_stamp();
+
+  // If this is a pure feasibility problem, obey
+  // `BopParameters.max_lp_solve_for_feasibility_problems`.
+  if (problem_state.original_problem().objective().literals_size() == 0 &&
+      parameters_.max_lp_solve_for_feasibility_problems() >= 0 &&
+      num_full_solves_ >= parameters_.max_lp_solve_for_feasibility_problems()) {
+    return BopOptimizerBase::ABORT;
+  }
 
   // Check if the number of fixed variables is greater than last time.
   // TODO(user): Consider checking changes in number of conflicts too.
@@ -396,13 +406,13 @@ BopOptimizerBase::Status LinearRelaxation::SynchronizeIfNeeded(
                         (clause.b.IsPositive() ? 0 : -1);
       const ColIndex col_a(clause.a.Variable().value());
       const ColIndex col_b(clause.b.Variable().value());
+      const std::string name_a = lp_model_.GetVariableName(col_a);
+      const std::string name_b = lp_model_.GetVariableName(col_b);
+
       lp_model_.SetConstraintName(
           constraint_index,
-          StringPrintf((clause.a.IsPositive() ? "%s" : "not(%s)"),
-                       lp_model_.GetVariableName(col_a).c_str()) +
-              " or " +
-              StringPrintf((clause.b.IsPositive() ? "%s" : "not(%s)"),
-                           lp_model_.GetVariableName(col_b).c_str()));
+          (clause.a.IsPositive() ? name_a : "not(" + name_a + ")") + " or " +
+              (clause.b.IsPositive() ? name_b : "not(" + name_b + ")"));
       lp_model_.SetCoefficient(constraint_index, col_a, coefficient_a);
       lp_model_.SetCoefficient(constraint_index, col_b, coefficient_b);
       lp_model_.SetConstraintBounds(constraint_index, rhs, glop::kInfinity);
@@ -419,10 +429,14 @@ BopOptimizerBase::Status LinearRelaxation::SynchronizeIfNeeded(
   return BopOptimizerBase::CONTINUE;
 }
 
-// Only run the LP solver when there is an objective to minimize.
+// Always let the LP solver run if there is an objective. If there isn't, only
+// let the LP solver run if the user asked for it by setting
+// `BopParameters.max_lp_solve_for_feasibility_problems` to a non-zero value
+// (a negative value means no limit).
 // TODO(user): also deal with problem_already_solved_
 bool LinearRelaxation::ShouldBeRun(const ProblemState& problem_state) const {
-  return problem_state.original_problem().objective().literals_size() > 0;
+  return problem_state.original_problem().objective().literals_size() > 0 ||
+         parameters_.max_lp_solve_for_feasibility_problems() != 0;
 }
 
 BopOptimizerBase::Status LinearRelaxation::Optimize(
@@ -440,11 +454,12 @@ BopOptimizerBase::Status LinearRelaxation::Optimize(
 
   const glop::ProblemStatus lp_status = Solve(false, time_limit);
   VLOG(1) << "                          LP: "
-          << StringPrintf("%.6f", lp_solver_.GetObjectiveValue())
+          << absl::StrFormat("%.6f", lp_solver_.GetObjectiveValue())
           << "   status: " << GetProblemStatusString(lp_status);
 
   if (lp_status == glop::ProblemStatus::OPTIMAL ||
       lp_status == glop::ProblemStatus::IMPRECISE) {
+    ++num_full_solves_;
     problem_already_solved_ = true;
   }
 
@@ -466,7 +481,7 @@ BopOptimizerBase::Status LinearRelaxation::Optimize(
       lower_bound =
           ComputeLowerBoundUsingStrongBranching(learned_info, time_limit);
       VLOG(1) << "                          LP: "
-              << StringPrintf("%.6f", lower_bound)
+              << absl::StrFormat("%.6f", lower_bound)
               << "   using strong branching.";
     }
 

@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -13,7 +13,8 @@
 
 #include "ortools/bop/bop_ls.h"
 
-#include "ortools/base/stringprintf.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_format.h"
 #include "ortools/bop/bop_util.h"
 #include "ortools/sat/boolean_problem.h"
 
@@ -48,9 +49,9 @@ BopOptimizerBase::Status LocalSearchOptimizer::Optimize(
   learned_info->Clear();
 
   if (assignment_iterator_ == nullptr) {
-    assignment_iterator_.reset(new LocalSearchAssignmentIterator(
+    assignment_iterator_ = absl::make_unique<LocalSearchAssignmentIterator>(
         problem_state, max_num_decisions_,
-        parameters.max_num_broken_constraints_in_ls(), &sat_wrapper_));
+        parameters.max_num_broken_constraints_in_ls(), &sat_wrapper_);
   }
 
   if (state_update_stamp_ != problem_state.update_stamp()) {
@@ -380,7 +381,7 @@ std::string AssignmentAndConstraintFeasibilityMaintainer::DebugString() const {
   str += "\nFlipped variables: ";
   // TODO(user): show the backtrack levels.
   for (const VariableIndex var : flipped_var_trail_) {
-    str += StringPrintf(" %d", var.value());
+    str += absl::StrFormat(" %d", var.value());
   }
   str += "\nmin  curr  max\n";
   for (ConstraintIndex ct(0); ct < constraint_values_.size(); ++ct) {
@@ -818,9 +819,9 @@ double LocalSearchAssignmentIterator::deterministic_time() const {
 std::string LocalSearchAssignmentIterator::DebugString() const {
   std::string str = "Search nodes:\n";
   for (int i = 0; i < search_nodes_.size(); ++i) {
-    str +=
-        StringPrintf("  %d: %d  %d\n", i, search_nodes_[i].constraint.value(),
-                     search_nodes_[i].term_index.value());
+    str += absl::StrFormat("  %d: %d  %d\n", i,
+                           search_nodes_[i].constraint.value(),
+                           search_nodes_[i].term_index.value());
   }
   return str;
 }
@@ -940,7 +941,7 @@ bool LocalSearchAssignmentIterator::GoDeeper() {
   // Add the new decision.
   //
   // TODO(user): Store the last explored term index to not start from -1 each
-  // time. This will be very useful when a backtrack occured due to the SAT
+  // time. This will be very useful when a backtrack occurred due to the SAT
   // propagator. Note however that this behavior is already enforced when we use
   // the transposition table, since we will not explore again the branches
   // already explored.

@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,9 +17,8 @@
 #include <cmath>
 #include <vector>
 
+#include "absl/strings/str_format.h"
 #include "ortools/base/logging.h"
-#include "ortools/base/memory.h"
-#include "ortools/base/stringprintf.h"
 #include "ortools/glop/revised_simplex.h"
 #include "ortools/lp_data/lp_utils.h"
 #include "ortools/lp_data/sparse.h"
@@ -64,7 +63,7 @@ std::string SparseMatrixScaler::DebugInformationString() const {
   Fractional min_magnitude;
   matrix_->ComputeMinAndMaxMagnitudes(&min_magnitude, &max_magnitude);
   const Fractional dynamic_range = max_magnitude / min_magnitude;
-  std::string output = StringPrintf(
+  std::string output = absl::StrFormat(
       "Min magnitude = %g, max magnitude = %g\n"
       "Dynamic range = %g\n"
       "Variance = %g\n"
