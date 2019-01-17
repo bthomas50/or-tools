@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,8 +18,8 @@
 
 #include <string>
 
+#include "absl/strings/str_format.h"
 #include "ortools/base/integral_types.h"
-#include "ortools/base/stringprintf.h"
 #include "ortools/lp_data/lp_types.h"
 
 namespace operations_research {
@@ -27,14 +27,16 @@ namespace glop {
 
 // Returns a std::string representing a floating-point number in decimal,
 // with a precision corresponding to the type of the argument.
-inline std::string Stringify(const float a) { return StringPrintf("%.7g", a); }
+inline std::string Stringify(const float a) {
+  return absl::StrFormat("%.7g", a);
+}
 
 inline std::string Stringify(const double a) {
-  return StringPrintf("%.16g", a);
+  return absl::StrFormat("%.16g", a);
 }
 
 inline std::string Stringify(const long double a) {
-  return StringPrintf("%.19Lg", a);
+  return absl::StrFormat("%.19g", a);
 }
 
 // Returns a std::string "num/den" representing the rational approximation of x.

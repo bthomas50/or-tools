@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -143,6 +143,8 @@ struct hash<std::array<T, N>> {
 };
 }  // namespace std
 
+#endif  // SWIG
+
 namespace util_hash {
 
 inline uint64 Hash(uint64 num, uint64 c) {
@@ -151,8 +153,11 @@ inline uint64 Hash(uint64 num, uint64 c) {
   return c;
 }
 
-}  // namespace hash
+inline uint64 Hash(uint64 a, uint64 b, uint64 c) {
+  operations_research::mix(a, b, c);
+  return c;
+}
 
-#endif  // SWIG
+}  // namespace util_hash
 
 #endif  // OR_TOOLS_BASE_HASH_H_

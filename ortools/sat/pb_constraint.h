@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,16 +18,16 @@
 #include <limits>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/types/span.h"
 #include "ortools/base/hash.h"
 #include "ortools/base/int_type.h"
 #include "ortools/base/int_type_indexed_vector.h"
 #include "ortools/base/integral_types.h"
 #include "ortools/base/logging.h"
 #include "ortools/base/macros.h"
-#include "ortools/base/span.h"
 #include "ortools/sat/sat_base.h"
 #include "ortools/sat/sat_parameters.pb.h"
 #include "ortools/util/bitset.h"
@@ -234,7 +234,7 @@ class MutableUpperBoundedLinearConstraint {
 
   // Relaxes the constraint so that:
   // - ComputeSlackForTrailPrefix(trail, trail_index) == target;
-  // - All the variable that where propagated given the assignment < trail_index
+  // - All the variables that were propagated given the assignment < trail_index
   //   are still propagated.
   //
   // As a precondition, ComputeSlackForTrailPrefix(trail, trail_index) >= target
@@ -244,7 +244,7 @@ class MutableUpperBoundedLinearConstraint {
   // linear expression in 3 parts:
   // - P1: the true variables (only the one assigned < trail_index).
   // - P2: the other variables with a coeff > diff.
-  //       Note that all these variables where the propagated ones.
+  //       Note that all these variables were the propagated ones.
   // - P3: the other variables with a coeff <= diff.
   // We can then transform P1 + P2 + P3 <= rhs_ into P1 + P2' <= rhs_ - diff
   // Where P2' is the same sum as P2 with all the coefficient reduced by diff.
@@ -471,8 +471,8 @@ class UpperBoundedLinearConstraint {
   // This is used for duplicate detection.
   int64 hash() const { return hash_; }
 
-  // This is used to get statistics of the number of literals inspected by a
-  // Propagate() call.
+  // This is used to get statistics of the number of literals inspected by
+  // a Propagate() call.
   int already_propagated_end() const { return already_propagated_end_; }
 
  private:
@@ -497,8 +497,8 @@ class UpperBoundedLinearConstraint {
 
   // In the internal representation, we merge the terms with the same
   // coefficient.
-  // - literals_ contains all the literal of the constraint sorted by increasing
-  //   coefficients.
+  // - literals_ contains all the literal of the constraint sorted by
+  //   increasing coefficients.
   // - coeffs_ contains unique increasing coefficients.
   // - starts_[i] is the index in literals_ of the first literal with
   //   coefficient coeffs_[i].
@@ -533,11 +533,12 @@ class PbConstraints : public SatPropagator {
 
   bool Propagate(Trail* trail) final;
   void Untrail(const Trail& trail, int trail_index) final;
-  absl::Span<Literal> Reason(const Trail& trail, int trail_index) const final;
+  absl::Span<const Literal> Reason(const Trail& trail,
+                                   int trail_index) const final;
 
   // Changes the number of variables.
   void Resize(int num_variables) {
-    // Note that we avoid using up memory in the common case where there is no
+    // Note that we avoid using up memory in the common case where there are no
     // pb constraints at all. If there is 10 million variables, this vector
     // alone will take 480 MB!
     if (!constraints_.empty()) {
@@ -652,7 +653,7 @@ class PbConstraints : public SatPropagator {
 
   // Pointers to the constraints grouped by their hash.
   // This is used to find duplicate constraints by AddConstraint().
-  std::unordered_map<int64, std::vector<UpperBoundedLinearConstraint*>>
+  absl::flat_hash_map<int64, std::vector<UpperBoundedLinearConstraint*>>
       possible_duplicates_;
 
   // Helper to enqueue propagated literals on the trail and store their reasons.

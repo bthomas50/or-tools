@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -54,6 +54,14 @@ void UpdateRow::IgnoreUpdatePosition(ColIndex col) {
 
 const ScatteredRow& UpdateRow::GetUnitRowLeftInverse() const {
   DCHECK(!compute_update_row_);
+  return unit_row_left_inverse_;
+}
+
+const ScatteredRow& UpdateRow::ComputeAndGetUnitRowLeftInverse(
+    RowIndex leaving_row) {
+  Invalidate();
+  basis_factorization_.TemporaryLeftSolveForUnitRow(RowToColIndex(leaving_row),
+                                                    &unit_row_left_inverse_);
   return unit_row_left_inverse_;
 }
 

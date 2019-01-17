@@ -16,9 +16,9 @@
 #include <limits>
 #include <memory>
 
+#include "absl/strings/str_format.h"
 #include "ortools/base/integral_types.h"
 #include "ortools/base/logging.h"
-#include "ortools/base/stringprintf.h"
 #include "ortools/base/timer.h"
 #include "ortools/linear_solver/linear_solver.h"
 
@@ -257,7 +257,7 @@ std::string CplexInterface::SolverVersion() const {
   version -= mod * 100;
   int const fix = version;
 
-  return StringPrintf("CPLEX library version %d.%02d.%02d.%02d", major, release,
+  return absl::StrFormat("CPLEX library version %d.%02d.%02d.%02d", major, release,
                       mod, fix);
 }
 
@@ -379,13 +379,13 @@ void CplexInterface::MakeRhs(double lb, double ub, double &rhs, char &sense,
     range = ub - lb;
     sense = 'R';
   } else if (ub < CPX_INFBOUND ||
-             (fabs(ub) == CPX_INFBOUND && fabs(lb) > CPX_INFBOUND)) {
+             (std::abs(ub) == CPX_INFBOUND && std::abs(lb) > CPX_INFBOUND)) {
     // Finite upper, infinite lower bound -> this is a <= constraint
     rhs = ub;
     range = 0.0;
     sense = 'L';
   } else if (lb > -CPX_INFBOUND ||
-             (fabs(lb) == CPX_INFBOUND && fabs(ub) > CPX_INFBOUND)) {
+             (std::abs(lb) == CPX_INFBOUND && std::abs(ub) > CPX_INFBOUND)) {
     // Finite lower, infinite upper bound -> this is a >= constraint
     rhs = lb;
     range = 0.0;
@@ -399,9 +399,9 @@ void CplexInterface::MakeRhs(double lb, double ub, double &rhs, char &sense,
     // Note that we replace the infinite bound by CPX_INFBOUND since
     // bounds with larger magnitude may cause other CPLEX functions to
     // fail (for example the export to LP files).
-    DCHECK_GT(fabs(lb), CPX_INFBOUND);
-    DCHECK_GT(fabs(ub), CPX_INFBOUND);
-    if (fabs(lb) > fabs(ub)) {
+    DCHECK_GT(std::abs(lb), CPX_INFBOUND);
+    DCHECK_GT(std::abs(ub), CPX_INFBOUND);
+    if (std::abs(lb) > std::abs(ub)) {
       rhs = (lb < 0) ? -CPX_INFBOUND : CPX_INFBOUND;
       sense = 'G';
     } else {
@@ -518,9 +518,8 @@ void CplexInterface::ClearConstraint(MPConstraint *const constraint) {
     unique_ptr<CPXDIM[]> colind(new CPXDIM[len]);
     unique_ptr<double[]> val(new double[len]);
     CPXDIM j = 0;
-    CoeffMap const &coeffs = constraint->coefficients_;
-    for (CoeffMap::const_iterator it(coeffs.begin()); it != coeffs.end();
-         ++it) {
+    const auto& coeffs = constraint->coefficients_;
+    for (auto it(coeffs.begin()); it != coeffs.end(); ++it) {
       CPXDIM const col = it->first->index();
       if (variable_is_extracted(col)) {
         rowind[j] = row;
@@ -576,9 +575,8 @@ void CplexInterface::ClearObjective() {
     unique_ptr<CPXDIM[]> ind(new CPXDIM[cols]);
     unique_ptr<double[]> zero(new double[cols]);
     CPXDIM j = 0;
-    CoeffMap const &coeffs = solver_->objective_->coefficients_;
-    for (CoeffMap::const_iterator it(coeffs.begin()); it != coeffs.end();
-         ++it) {
+    const auto& coeffs = solver_->objective_->coefficients_;
+    for (auto it(coeffs.begin()); it != coeffs.end(); ++it) {
       CPXDIM const idx = it->first->index();
       // We only need to reset variables that have been extracted.
       if (variable_is_extracted(idx)) {
@@ -773,9 +771,8 @@ void CplexInterface::ExtractNewVariables() {
         for (int i = 0; i < last_constraint_index_; ++i) {
           MPConstraint const *const ct = solver_->constraints_[i];
           CHECK(constraint_is_extracted(ct->index()));
-          CoeffMap const &coeffs = ct->coefficients_;
-          for (CoeffMap::const_iterator it(coeffs.begin()); it != coeffs.end();
-               ++it) {
+          const auto& coeffs = ct->coefficients_;
+          for (auto it(coeffs.begin()); it != coeffs.end(); ++it) {
             int const idx = it->first->index();
             if (variable_is_extracted(idx) && idx > last_variable_index_) {
               collen[idx - last_variable_index_]++;
@@ -812,9 +809,8 @@ void CplexInterface::ExtractNewVariables() {
           for (int i = 0; i < last_constraint_index_; ++i) {
             MPConstraint const *const ct = solver_->constraints_[i];
             CPXDIM const row = ct->index();
-            CoeffMap const &coeffs = ct->coefficients_;
-            for (CoeffMap::const_iterator it(coeffs.begin());
-                 it != coeffs.end(); ++it) {
+            const auto& coeffs = ct->coefficients_;
+            for (auto it(coeffs.begin()); it != coeffs.end(); ++it) {
               int const idx = it->first->index();
               if (variable_is_extracted(idx) && idx > last_variable_index_) {
                 CPXNNZ const nz = cmatbeg[idx]++;
@@ -934,9 +930,8 @@ void CplexInterface::ExtractNewConstraints() {
 
           // Setup left-hand side of constraint.
           rmatbeg[nextRow] = nextNz;
-          CoeffMap const &coeffs = ct->coefficients_;
-          for (CoeffMap::const_iterator it(coeffs.begin()); it != coeffs.end();
-               ++it) {
+          const auto& coeffs = ct->coefficients_;
+          for (auto it(coeffs.begin()); it != coeffs.end(); ++it) {
             CPXDIM const idx = it->first->index();
             if (variable_is_extracted(idx)) {
               DCHECK_LT(nextNz, cols);
@@ -987,8 +982,8 @@ void CplexInterface::ExtractObjective() {
     val[j] = 0.0;
   }
 
-  CoeffMap const &coeffs = solver_->objective_->coefficients_;
-  for (CoeffMap::const_iterator it = coeffs.begin(); it != coeffs.end(); ++it) {
+  const auto& coeffs = solver_->objective_->coefficients_;
+  for (auto it = coeffs.begin(); it != coeffs.end(); ++it) {
     CPXDIM const idx = it->first->index();
     if (variable_is_extracted(idx)) {
       DCHECK_LT(idx, cols);
@@ -1134,7 +1129,7 @@ MPSolver::ResultStatus CplexInterface::Solve(MPSolverParameters const &param) {
   // solve.
   if (!supportIncrementalExtraction && sync_status_ == MUST_RELOAD) Reset();
   ExtractModel();
-  VLOG(1) << StringPrintf("Model build in %.3f seconds.", timer.Get());
+  VLOG(1) << absl::StrFormat("Model build in %.3f seconds.", timer.Get());
 
   // Set log level.
   CHECK_STATUS(
@@ -1168,15 +1163,15 @@ MPSolver::ResultStatus CplexInterface::Solve(MPSolverParameters const &param) {
   (void)CPXXsetintparam(mEnv, CPX_PARAM_SCRIND, CPX_OFF);
 
   if (status) {
-    VLOG(1) << StringPrintf("Failed to optimize MIP. Error %d", status);
+    VLOG(1) << absl::StrFormat("Failed to optimize MIP. Error %d", status);
     // NOTE: We do not return immediately since there may be information
     //       to grab (for example an incumbent)
   } else {
-    VLOG(1) << StringPrintf("Solved in %.3f seconds.", timer.Get());
+    VLOG(1) << absl::StrFormat("Solved in %.3f seconds.", timer.Get());
   }
 
   int const cpxstat = CPXXgetstat(mEnv, mLp);
-  VLOG(1) << StringPrintf("CPLEX solution status %d.", cpxstat);
+  VLOG(1) << absl::StrFormat("CPLEX solution status %d.", cpxstat);
 
   // Figure out what solution we have.
   int solnmethod, solntype, pfeas, dfeas;
@@ -1240,8 +1235,8 @@ MPSolver::ResultStatus CplexInterface::Solve(MPSolverParameters const &param) {
         } else
           var->set_reduced_cost(CPX_NAN);
         VLOG(3) << var->name() << ":"
-                << (value ? StringPrintf("  value = %f", x[i]) : "")
-                << (dual ? StringPrintf("  reduced cost = %f", dj[i]) : "");
+                << (value ? absl::StrFormat("  value = %f", x[i]) : "")
+                << (dual ? absl::StrFormat("  reduced cost = %f", dj[i]) : "");
       }
     }
 
@@ -1257,7 +1252,7 @@ MPSolver::ResultStatus CplexInterface::Solve(MPSolverParameters const &param) {
         } else
           ct->set_dual_value(CPX_NAN);
         VLOG(4) << "row " << ct->index() << ":"
-                << (dual ? StringPrintf("  dual = %f", pi[i]) : "");
+                << (dual ? absl::StrFormat("  dual = %f", pi[i]) : "");
       }
     }
   }

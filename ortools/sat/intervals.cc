@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -33,14 +33,19 @@ IntervalVariable IntervalsRepository::CreateInterval(IntegerVariable start,
   fixed_sizes_.push_back(fixed_size);
   is_present_.push_back(is_present);
 
+  std::vector<Literal> enforcement_literals;
+  if (is_present != kNoLiteralIndex) {
+    enforcement_literals.push_back(Literal(is_present));
+  }
+
   // Link properly all its components.
   precedences_->AddPrecedenceWithAllOptions(StartVar(i), EndVar(i), fixed_size,
-                                            SizeVar(i), is_present);
+                                            SizeVar(i), enforcement_literals);
   precedences_->AddPrecedenceWithAllOptions(EndVar(i), StartVar(i), -fixed_size,
                                             SizeVar(i) == kNoIntegerVariable
                                                 ? kNoIntegerVariable
                                                 : NegationOf(SizeVar(i)),
-                                            is_present);
+                                            enforcement_literals);
   return i;
 }
 
@@ -82,11 +87,15 @@ SchedulingConstraintHelper::SchedulingConstraintHelper(
   task_by_increasing_min_end_.resize(num_tasks);
   task_by_decreasing_max_start_.resize(num_tasks);
   task_by_decreasing_max_end_.resize(num_tasks);
+  task_by_increasing_shifted_start_min_.resize(num_tasks);
+  task_by_decreasing_shifted_end_max_.resize(num_tasks);
   for (int t = 0; t < num_tasks; ++t) {
     task_by_increasing_min_start_[t].task_index = t;
     task_by_increasing_min_end_[t].task_index = t;
     task_by_decreasing_max_start_[t].task_index = t;
     task_by_decreasing_max_end_[t].task_index = t;
+    task_by_increasing_shifted_start_min_[t].task_index = t;
+    task_by_decreasing_shifted_end_max_[t].task_index = t;
   }
 }
 
@@ -98,6 +107,8 @@ void SchedulingConstraintHelper::SetTimeDirection(bool is_forward) {
   std::swap(end_vars_, minus_start_vars_);
   std::swap(task_by_increasing_min_start_, task_by_decreasing_max_end_);
   std::swap(task_by_increasing_min_end_, task_by_decreasing_max_start_);
+  std::swap(task_by_increasing_shifted_start_min_,
+            task_by_decreasing_shifted_end_max_);
 }
 
 const std::vector<SchedulingConstraintHelper::TaskTime>&
@@ -149,6 +160,32 @@ SchedulingConstraintHelper::TaskByDecreasingEndMax() {
   return task_by_decreasing_max_end_;
 }
 
+const std::vector<SchedulingConstraintHelper::TaskTime>&
+SchedulingConstraintHelper::TaskByIncreasingShiftedStartMin() {
+  const int num_tasks = NumTasks();
+  for (int i = 0; i < num_tasks; ++i) {
+    TaskTime& ref = task_by_increasing_shifted_start_min_[i];
+    ref.time = ShiftedStartMin(ref.task_index);
+  }
+  IncrementalSort(task_by_increasing_shifted_start_min_.begin(),
+                  task_by_increasing_shifted_start_min_.end());
+  return task_by_increasing_shifted_start_min_;
+}
+
+// Produces a relaxed reason for StartMax(before) < EndMin(after).
+void SchedulingConstraintHelper::AddReasonForBeingBefore(int before,
+                                                         int after) {
+  DCHECK_LT(StartMax(before), EndMin(after));
+  const IntegerValue slack = EndMin(after) - StartMax(before) - 1;
+  std::vector<IntegerLiteral> temp;
+  temp.push_back(integer_trail_->LowerBoundAsLiteral(end_vars_[after]));
+  temp.push_back(
+      integer_trail_->LowerBoundAsLiteral(NegationOf(start_vars_[before])));
+  integer_trail_->RelaxLinearReason(slack, {IntegerValue(1), IntegerValue(1)},
+                                    &temp);
+  integer_reason_.insert(integer_reason_.end(), temp.begin(), temp.end());
+}
+
 bool SchedulingConstraintHelper::PushIntegerLiteral(IntegerLiteral bound) {
   return integer_trail_->Enqueue(bound, literal_reason_, integer_reason_);
 }
@@ -169,7 +206,7 @@ bool SchedulingConstraintHelper::PushIntervalBound(int t, IntegerLiteral lit) {
       if (lit.bound > integer_trail_->UpperBound(lit.var)) {
         integer_reason_.push_back(
             IntegerLiteral::LowerOrEqual(lit.var, lit.bound - 1));
-        PushTaskAbsence(t);
+        if (!PushTaskAbsence(t)) return false;
       }
       return true;
     }
@@ -195,12 +232,16 @@ bool SchedulingConstraintHelper::DecreaseEndMax(int t,
       t, IntegerLiteral::LowerOrEqual(end_vars_[t], new_max_end));
 }
 
-void SchedulingConstraintHelper::PushTaskAbsence(int t) {
+bool SchedulingConstraintHelper::PushTaskAbsence(int t) {
   DCHECK_NE(reason_for_presence_[t], kNoLiteralIndex);
-  DCHECK(!IsPresent(t));
   DCHECK(!IsAbsent(t));
+  if (IsPresent(t)) {
+    literal_reason_.push_back(Literal(reason_for_presence_[t]).Negated());
+    return ReportConflict();
+  }
   integer_trail_->EnqueueLiteral(Literal(reason_for_presence_[t]).Negated(),
                                  literal_reason_, integer_reason_);
+  return true;
 }
 
 bool SchedulingConstraintHelper::ReportConflict() {

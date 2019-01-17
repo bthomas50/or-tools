@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -28,8 +28,9 @@
 #define OR_TOOLS_BOP_BOP_LS_H_
 
 #include <array>
-#include <unordered_set>
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "ortools/base/hash.h"
 #include "ortools/base/random.h"
 #include "ortools/bop/bop_base.h"
@@ -404,7 +405,7 @@ class AssignmentAndConstraintFeasibilityMaintainer {
   // Members used by PotentialOneFlipRepairs().
   std::vector<sat::Literal> tmp_potential_repairs_;
   NonOrderedSetHasher<ConstraintIndexWithDirection> constraint_set_hasher_;
-  std::unordered_map<uint64, std::vector<sat::Literal>>
+  absl::flat_hash_map<uint64, std::vector<sat::Literal>>
       hash_to_potential_repairs_;
 
   DISALLOW_COPY_AND_ASSIGN(AssignmentAndConstraintFeasibilityMaintainer);
@@ -456,17 +457,17 @@ class OneFlipConstraintRepairer {
   // Note that if init_term_index == start_term_index, then all the terms will
   // be explored. Both TermIndex arguments can take values in [-1, constraint
   // size).
-  TermIndex NextRepairingTerm(ConstraintIndex constraint,
+  TermIndex NextRepairingTerm(ConstraintIndex ct_index,
                               TermIndex init_term_index,
                               TermIndex start_term_index) const;
 
   // Returns true if the constraint is infeasible and if flipping the variable
   // at the given index will repair it.
-  bool RepairIsValid(ConstraintIndex constraint, TermIndex term_index) const;
+  bool RepairIsValid(ConstraintIndex ct_index, TermIndex term_index) const;
 
   // Returns the literal formed by the variable at the given constraint term and
   // assigned to the opposite value of this variable in the current assignment.
-  sat::Literal GetFlip(ConstraintIndex constraint, TermIndex term_index) const;
+  sat::Literal GetFlip(ConstraintIndex ct_index, TermIndex term_index) const;
 
   // Local structure to represent the sparse matrix by constraint used for fast
   // lookups.
@@ -612,7 +613,7 @@ class LocalSearchAssignmentIterator {
   // Ideally, this should be related to the maximum number of decision in the
   // LS, but that requires templating the whole LS optimizer.
   bool use_transposition_table_;
-  std::unordered_set<std::array<int32, kStoredMaxDecisions>>
+  absl::flat_hash_set<std::array<int32, kStoredMaxDecisions>>
       transposition_table_;
 
   bool use_potential_one_flip_repairs_;

@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,7 +18,7 @@
 #include <functional>
 #include <vector>
 
-#include "ortools/base/inlined_vector.h"
+#include "absl/container/inlined_vector.h"
 #include "ortools/base/int_type.h"
 #include "ortools/base/int_type_indexed_vector.h"
 #include "ortools/base/integral_types.h"
@@ -86,38 +86,33 @@ class PrecedencesPropagator : public SatPropagator, PropagatorInterface {
   // Generic function that cover all of the above case and more.
   void AddPrecedenceWithAllOptions(IntegerVariable i1, IntegerVariable i2,
                                    IntegerValue offset,
-                                   IntegerVariable offset_var, LiteralIndex l);
+                                   IntegerVariable offset_var,
+                                   absl::Span<const Literal> presence_literals);
 
-  // Finds all the IntegerVariable that are "after" one of the IntegerVariable
-  // in vars. Returns a vector of these precedences relation sorted by
-  // IntegerPrecedences.var so that it is efficient to find all the
+  // Finds all the IntegerVariable that are "after" at least two of the
+  // IntegerVariable in vars. Returns a vector of these precedences relation
+  // sorted by IntegerPrecedences.var so that it is efficient to find all the
   // IntegerVariable "before" another one.
   //
   // Note that we only consider direct precedences here. Given our usage, it may
   // be better to compute the full reachability in the precedence graph, but in
-  // pratice that may be too slow. On a good note, because we have all the
-  // potential precedences between tasks in disjunctions, on a single machine,
-  // both notion should be the same since we automatically work on the
-  // transitive closure.
+  // pratice that may be too slow.
   //
   // Note that the IntegerVariable in the vector are also returned in
   // topological order for a more efficient propagation in
-  // DisjunctiveConstraint::PrecedencesPass() where this is used.
+  // DisjunctivePrecedences::Propagate() where this is used.
   struct IntegerPrecedences {
-    int index;            // in vars.
+    int index;            // position in vars.
     IntegerVariable var;  // An IntegerVariable that is >= to vars[index].
-
-    // The reason for it to be >=.
-    absl::InlinedVector<Literal, 6> reason;
-
-    // Only needed for testing.
-    bool operator==(const IntegerPrecedences& o) const {
-      return index == o.index && var == o.var && reason == o.reason;
-    }
+    int arc_index;        // Used by AddPrecedenceReason().
+    IntegerValue offset;  // we have: input_vars[index] + offset <= var
   };
   void ComputePrecedences(const std::vector<IntegerVariable>& vars,
                           const std::vector<bool>& to_consider,
                           std::vector<IntegerPrecedences>* output);
+  void AddPrecedenceReason(int arc_index, IntegerValue min_offset,
+                           std::vector<Literal>* literal_reason,
+                           std::vector<IntegerLiteral>* integer_reason) const;
 
   // Advanced usage. To be called once all the constraints have been added to
   // the model. This will loop over all "node" in this class, and if one of its
@@ -157,7 +152,8 @@ class PrecedencesPropagator : public SatPropagator, PropagatorInterface {
   // on their negation.
   void AdjustSizeFor(IntegerVariable i);
   void AddArc(IntegerVariable tail, IntegerVariable head, IntegerValue offset,
-              IntegerVariable offset_var, LiteralIndex l);
+              IntegerVariable offset_var,
+              absl::Span<const Literal> presence_literals);
 
   // Enqueue a new lower bound for the variable arc.head_lb that was deduced
   // from the current value of arc.tail_lb and the offset of this arc.
@@ -189,7 +185,10 @@ class PrecedencesPropagator : public SatPropagator, PropagatorInterface {
   bool BellmanFordTarjan(Trail* trail);
   bool DisassembleSubtree(int source, int target,
                           std::vector<bool>* can_be_skipped);
-  void ReportPositiveCycle(ArcIndex first_arc, Trail* trail);
+  void AnalyzePositiveCycle(ArcIndex first_arc, Trail* trail,
+                            std::vector<Literal>* literal_to_push,
+                            std::vector<Literal>* literal_reason,
+                            std::vector<IntegerLiteral>* integer_reason);
   void CleanUpMarkedArcsAndParents();
 
   // Loops over all the arcs and verify that there is no propagation left.
@@ -258,7 +257,7 @@ class PrecedencesPropagator : public SatPropagator, PropagatorInterface {
   std::vector<IntegerLiteral> integer_reason_;
 
   // Temp vectors for the Bellman-Ford algorithm. The graph in which this
-  // algorithm works is in one to one correspondance with the IntegerVariable in
+  // algorithm works is in one to one correspondence with the IntegerVariable in
   // impacted_arcs_.
   std::deque<int> bf_queue_;
   std::vector<bool> bf_in_queue_;
@@ -278,36 +277,35 @@ class PrecedencesPropagator : public SatPropagator, PropagatorInterface {
 inline void PrecedencesPropagator::AddPrecedence(IntegerVariable i1,
                                                  IntegerVariable i2) {
   AddArc(i1, i2, /*offset=*/IntegerValue(0), /*offset_var=*/kNoIntegerVariable,
-         /*l=*/kNoLiteralIndex);
+         {});
 }
 
 inline void PrecedencesPropagator::AddPrecedenceWithOffset(
     IntegerVariable i1, IntegerVariable i2, IntegerValue offset) {
-  AddArc(i1, i2, offset, /*offset_var=*/kNoIntegerVariable,
-         /*l=*/kNoLiteralIndex);
+  AddArc(i1, i2, offset, /*offset_var=*/kNoIntegerVariable, {});
 }
 
 inline void PrecedencesPropagator::AddConditionalPrecedence(IntegerVariable i1,
                                                             IntegerVariable i2,
                                                             Literal l) {
   AddArc(i1, i2, /*offset=*/IntegerValue(0), /*offset_var=*/kNoIntegerVariable,
-         l.Index());
+         {l});
 }
 
 inline void PrecedencesPropagator::AddConditionalPrecedenceWithOffset(
     IntegerVariable i1, IntegerVariable i2, IntegerValue offset, Literal l) {
-  AddArc(i1, i2, offset, /*offset_var=*/kNoIntegerVariable, l.Index());
+  AddArc(i1, i2, offset, /*offset_var=*/kNoIntegerVariable, {l});
 }
 
 inline void PrecedencesPropagator::AddPrecedenceWithVariableOffset(
     IntegerVariable i1, IntegerVariable i2, IntegerVariable offset_var) {
-  AddArc(i1, i2, /*offset=*/IntegerValue(0), offset_var, /*l=*/kNoLiteralIndex);
+  AddArc(i1, i2, /*offset=*/IntegerValue(0), offset_var, {});
 }
 
 inline void PrecedencesPropagator::AddPrecedenceWithAllOptions(
     IntegerVariable i1, IntegerVariable i2, IntegerValue offset,
-    IntegerVariable offset_var, LiteralIndex r) {
-  AddArc(i1, i2, offset, offset_var, r);
+    IntegerVariable offset_var, absl::Span<const Literal> presence_literals) {
+  AddArc(i1, i2, offset, offset_var, presence_literals);
 }
 
 // =============================================================================
@@ -341,11 +339,12 @@ inline std::function<void(Model*)> Sum2LowerOrEqual(IntegerVariable a,
 
 // l => (a + b <= ub).
 inline std::function<void(Model*)> ConditionalSum2LowerOrEqual(
-    IntegerVariable a, IntegerVariable b, int64 ub, Literal l) {
+    IntegerVariable a, IntegerVariable b, int64 ub,
+    const std::vector<Literal>& enforcement_literals) {
   return [=](Model* model) {
     PrecedencesPropagator* p = model->GetOrCreate<PrecedencesPropagator>();
     p->AddPrecedenceWithAllOptions(a, NegationOf(b), IntegerValue(-ub),
-                                   kNoIntegerVariable, l.Index());
+                                   kNoIntegerVariable, enforcement_literals);
   };
 }
 
@@ -356,19 +355,18 @@ inline std::function<void(Model*)> Sum3LowerOrEqual(IntegerVariable a,
                                                     int64 ub) {
   return [=](Model* model) {
     PrecedencesPropagator* p = model->GetOrCreate<PrecedencesPropagator>();
-    p->AddPrecedenceWithAllOptions(a, NegationOf(c), IntegerValue(-ub), b,
-                                   kNoLiteralIndex);
+    p->AddPrecedenceWithAllOptions(a, NegationOf(c), IntegerValue(-ub), b, {});
   };
 }
 
 // l => (a + b + c <= ub).
 inline std::function<void(Model*)> ConditionalSum3LowerOrEqual(
     IntegerVariable a, IntegerVariable b, IntegerVariable c, int64 ub,
-    Literal l) {
+    const std::vector<Literal>& enforcement_literals) {
   return [=](Model* model) {
     PrecedencesPropagator* p = model->GetOrCreate<PrecedencesPropagator>();
     p->AddPrecedenceWithAllOptions(a, NegationOf(c), IntegerValue(-ub), b,
-                                   l.Index());
+                                   enforcement_literals);
   };
 }
 

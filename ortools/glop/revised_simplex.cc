@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,11 +21,11 @@
 #include <utility>
 #include <vector>
 
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "ortools/base/commandlineflags.h"
 #include "ortools/base/integral_types.h"
-#include "ortools/base/join.h"
 #include "ortools/base/logging.h"
-#include "ortools/base/stringprintf.h"
 #include "ortools/glop/initial_basis.h"
 #include "ortools/glop/parameters.pb.h"
 #include "ortools/lp_data/lp_data.h"
@@ -290,7 +290,7 @@ Status RevisedSimplex::Solve(const LinearProgram& lp, TimeLimit* time_limit) {
       if (reduced_costs_.ComputeMaximumDualResidual() > tolerance ||
           variable_values_.ComputeMaximumPrimalResidual() > tolerance ||
           reduced_costs_.ComputeMaximumDualInfeasibility() > tolerance) {
-        VLOG(1) << "DUAL_UNBOUNDED was reported, but the residual and/or"
+        VLOG(1) << "DUAL_UNBOUNDED was reported, but the residual and/or "
                 << "dual infeasibility is above the tolerance";
       }
       break;
@@ -307,7 +307,9 @@ Status RevisedSimplex::Solve(const LinearProgram& lp, TimeLimit* time_limit) {
         VLOG(1) << "OPTIMAL was reported, yet one of the residuals is "
                    "above the solution feasibility tolerance after the "
                    "shift/perturbation are removed.";
-        problem_status_ = ProblemStatus::IMPRECISE;
+        if (parameters_.change_status_to_imprecise()) {
+          problem_status_ = ProblemStatus::IMPRECISE;
+        }
       } else {
         // We use the "precise" tolerances here to try to report the best
         // possible solution.
@@ -324,7 +326,9 @@ Status RevisedSimplex::Solve(const LinearProgram& lp, TimeLimit* time_limit) {
           VLOG(1) << "OPTIMAL was reported, yet both of the infeasibility "
                      "are above the tolerance after the "
                      "shift/perturbation are removed.";
-          problem_status_ = ProblemStatus::IMPRECISE;
+          if (parameters_.change_status_to_imprecise()) {
+            problem_status_ = ProblemStatus::IMPRECISE;
+          }
         } else if (primal_infeasibility > primal_tolerance) {
           VLOG(1) << "Re-optimizing with dual simplex ... ";
           problem_status_ = ProblemStatus::DUAL_FEASIBLE;
@@ -441,16 +445,15 @@ std::string RevisedSimplex::GetPrettySolverStats() const {
   return absl::StrFormat(
       "Problem status                               : %s\n"
       "Solving time                                 : %-6.4g\n"
-      "Number of iterations                         : %llu\n"
+      "Number of iterations                         : %u\n"
       "Time for solvability (first phase)           : %-6.4g\n"
-      "Number of iterations for solvability         : %llu\n"
+      "Number of iterations for solvability         : %u\n"
       "Time for optimization                        : %-6.4g\n"
-      "Number of iterations for optimization        : %llu\n"
+      "Number of iterations for optimization        : %u\n"
       "Stop after first basis                       : %d\n",
-      GetProblemStatusString(problem_status_).c_str(), total_time_,
-      num_iterations_, feasibility_time_, num_feasibility_iterations_,
-      optimization_time_, num_optimization_iterations_,
-      FLAGS_simplex_stop_after_first_basis);
+      GetProblemStatusString(problem_status_), total_time_, num_iterations_,
+      feasibility_time_, num_feasibility_iterations_, optimization_time_,
+      num_optimization_iterations_, FLAGS_simplex_stop_after_first_basis);
 }
 
 double RevisedSimplex::DeterministicTime() const {
@@ -465,11 +468,11 @@ void RevisedSimplex::SetVariableNames() {
   variable_name_.resize(num_cols_, "");
   for (ColIndex col(0); col < first_slack_col_; ++col) {
     const ColIndex var_index = col + 1;
-    variable_name_[col] = StringPrintf("x%d", ColToIntIndex(var_index));
+    variable_name_[col] = absl::StrFormat("x%d", ColToIntIndex(var_index));
   }
   for (ColIndex col(first_slack_col_); col < num_cols_; ++col) {
     const ColIndex var_index = col - first_slack_col_ + 1;
-    variable_name_[col] = StringPrintf("s%d", ColToIntIndex(var_index));
+    variable_name_[col] = absl::StrFormat("s%d", ColToIntIndex(var_index));
   }
 }
 
@@ -909,7 +912,7 @@ void RevisedSimplex::InitializeVariableStatusesForWarmStart(
   }
 }
 
-// This implementation starts with an initial matrix B equal to the the identity
+// This implementation starts with an initial matrix B equal to the identity
 // matrix (modulo a column permutation). For that it uses either the slack
 // variables or the singleton columns present in the problem. Afterwards, the
 // fixed slacks in the basis are exchanged with normal columns of A if possible
@@ -939,6 +942,7 @@ Status RevisedSimplex::CreateInitialBasis() {
   // If possible, for the primal simplex we replace some slack variables with
   // some singleton columns present in the problem.
   if (!parameters_.use_dual_simplex() &&
+      parameters_.initial_basis() != GlopParameters::MAROS &&
       parameters_.exploit_singleton_column_in_initial_basis()) {
     // For UseSingletonColumnInInitialBasis() to work better, we change
     // the value of the boxed singleton column with a non-zero cost to the best
@@ -980,7 +984,28 @@ Status RevisedSimplex::CreateInitialBasis() {
   }
 
   // Use an advanced initial basis to remove the fixed variables from the basis.
-  if (parameters_.initial_basis() != GlopParameters::NONE) {
+  if (parameters_.initial_basis() == GlopParameters::NONE) {
+    return InitializeFirstBasis(basis);
+  }
+  if (parameters_.initial_basis() == GlopParameters::MAROS) {
+    InitialBasis initial_basis(matrix_with_slack_, objective_, lower_bound_,
+                               upper_bound_, variables_info_.GetTypeRow());
+    if (parameters_.use_dual_simplex()) {
+      // This dual version only uses zero-cost columns to complete the
+      // basis.
+      initial_basis.GetDualMarosBasis(num_cols_, &basis);
+    } else {
+      initial_basis.GetPrimalMarosBasis(num_cols_, &basis);
+    }
+    int number_changed = 0;
+    for (RowIndex row(0); row < num_rows_; ++row) {
+      if (basis[row] != SlackColIndex(row)) {
+        number_changed++;
+      }
+    }
+    VLOG(1) << "Number of Maros basis changes: " << number_changed;
+  } else if (parameters_.initial_basis() == GlopParameters::BIXBY ||
+             parameters_.initial_basis() == GlopParameters::TRIANGULAR) {
     // First unassign the fixed variables from basis.
     int num_fixed_variables = 0;
     for (RowIndex row(0); row < basis.size(); ++row) {
@@ -991,7 +1016,11 @@ Status RevisedSimplex::CreateInitialBasis() {
       }
     }
 
-    if (num_fixed_variables > 0) {
+    if (num_fixed_variables == 0) {
+      VLOG(1) << "Crash is set to " << parameters_.initial_basis()
+              << " but there is no equality rows to remove from initial all "
+                 "slack basis.";
+    } else {
       // Then complete the basis with an advanced initial basis algorithm.
       VLOG(1) << "Trying to remove " << num_fixed_variables
               << " fixed variables from the initial basis.";
@@ -1017,6 +1046,7 @@ Status RevisedSimplex::CreateInitialBasis() {
         } else {
           initial_basis.CompleteTriangularPrimalBasis(num_cols_, &basis);
         }
+
         const Status status = InitializeFirstBasis(basis);
 
         // Check that the upper bound on the condition number of LU is below
@@ -1032,12 +1062,13 @@ Status RevisedSimplex::CreateInitialBasis() {
           VLOG(1) << "Reverting to all slack basis.";
           basis = basis_copy;
         }
-      } else {
-        VLOG(1) << "Unsupported initial_basis parameters: "
-                << parameters_.initial_basis();
       }
     }
+  } else {
+    LOG(WARNING) << "Unsupported initial_basis parameters: "
+                 << parameters_.initial_basis();
   }
+
   return InitializeFirstBasis(basis);
 }
 
@@ -1123,31 +1154,10 @@ Status RevisedSimplex::Initialize(const LinearProgram& lp) {
   // scenarios of warm-start depending on how did the problem change and which
   // simplex algorithm is used (primal or dual).
   bool solve_from_scratch = true;
-  if (!solution_state_.IsEmpty()) {
-    if (solution_state_has_been_set_externally_) {
-      // If an external basis has been provided we need to perform more work,
-      // e.g., factorize and validate it.
-      InitializeVariableStatusesForWarmStart(solution_state_, ColIndex(0));
-      basis_.assign(num_rows_, kInvalidCol);
-      RowIndex row(0);
-      for (ColIndex col : variables_info_.GetIsBasicBitRow()) {
-        basis_[row] = col;
-        ++row;
-      }
-      // TODO(user): If the basis is incomplete, we could complete it with
-      // better slack variables than is done by InitializeFirstBasis() by
-      // using a partial LU decomposition (see markowitz.h).
-      dual_edge_norms_.Clear();
-      dual_pricing_vector_.clear();
-      if (InitializeFirstBasis(basis_).ok()) {
-        primal_edge_norms_.Clear();
-        reduced_costs_.ClearAndRemoveCostShifts();
-        solve_from_scratch = false;
-      } else {
-        VLOG(1) << "RevisedSimplex is not using the externally provided "
-                   "basis because it is not factorizable.";
-      }
-    } else if (!parameters_.use_dual_simplex()) {
+
+  // Try to perform a "quick" warm-start with no matrix factorization involved.
+  if (!solution_state_.IsEmpty() && !solution_state_has_been_set_externally_) {
+    if (!parameters_.use_dual_simplex()) {
       // With primal simplex, always clear dual norms and dual pricing.
       // Incrementality is supported only if only change to the matrix and
       // bounds is adding new columns (objective may change), and that all
@@ -1167,6 +1177,7 @@ Status RevisedSimplex::Initialize(const LinearProgram& lp) {
             col_ref += num_new_cols;
           }
         }
+
         // Make sure the primal edge norm are recomputed from scratch.
         // TODO(user): only the norms of the new columns actually need to be
         // computed.
@@ -1205,6 +1216,36 @@ Status RevisedSimplex::Initialize(const LinearProgram& lp) {
           solve_from_scratch = false;
         }
       }
+    }
+  }
+
+  // If we couldn't perform a "quick" warm start above, we can at least try to
+  // reuse the variable statuses.
+  if (solve_from_scratch && !solution_state_.IsEmpty()) {
+    // If an external basis has been provided or if the matrix changed, we need
+    // to perform more work, e.g., factorize the proposed basis and validate it.
+    InitializeVariableStatusesForWarmStart(solution_state_, ColIndex(0));
+    basis_.assign(num_rows_, kInvalidCol);
+    RowIndex row(0);
+    for (ColIndex col : variables_info_.GetIsBasicBitRow()) {
+      basis_[row] = col;
+      ++row;
+    }
+
+    basis_factorization_.Clear();
+    reduced_costs_.ClearAndRemoveCostShifts();
+    primal_edge_norms_.Clear();
+    dual_edge_norms_.Clear();
+    dual_pricing_vector_.clear();
+
+    // TODO(user): If the basis is incomplete, we could complete it with
+    // better slack variables than is done by InitializeFirstBasis() by
+    // using a partial LU decomposition (see markowitz.h).
+    if (InitializeFirstBasis(basis_).ok()) {
+      solve_from_scratch = false;
+    } else {
+      VLOG(1) << "RevisedSimplex is not using the warm start "
+                 "basis because it is not factorizable.";
     }
   }
 
@@ -2545,6 +2586,7 @@ Status RevisedSimplex::DualMinimize(TimeLimit* time_limit) {
   num_consecutive_degenerate_iterations_ = 0;
   bool refactorize = false;
   std::vector<ColIndex> bound_flip_candidates;
+  std::vector<std::pair<RowIndex, ColIndex>> to_ignore;
 
   // Leaving variable.
   RowIndex leaving_row;
@@ -2553,7 +2595,6 @@ Status RevisedSimplex::DualMinimize(TimeLimit* time_limit) {
 
   // Entering variable.
   ColIndex entering_col;
-  Fractional entering_coeff;
   Fractional ratio;
 
   while (true) {
@@ -2668,13 +2709,18 @@ Status RevisedSimplex::DualMinimize(TimeLimit* time_limit) {
     }
 
     update_row_.ComputeUpdateRow(leaving_row);
+    for (std::pair<RowIndex, ColIndex> pair : to_ignore) {
+      if (pair.first == leaving_row) {
+        update_row_.IgnoreUpdatePosition(pair.second);
+      }
+    }
     if (feasibility_phase_) {
       GLOP_RETURN_IF_ERROR(entering_variable_.DualPhaseIChooseEnteringColumn(
-          update_row_, cost_variation, &entering_col, &entering_coeff, &ratio));
+          update_row_, cost_variation, &entering_col, &ratio));
     } else {
       GLOP_RETURN_IF_ERROR(entering_variable_.DualChooseEnteringColumn(
           update_row_, cost_variation, &bound_flip_candidates, &entering_col,
-          &entering_coeff, &ratio));
+          &ratio));
     }
 
     // No entering_col: Unbounded problem / Infeasible problem.
@@ -2708,6 +2754,7 @@ Status RevisedSimplex::DualMinimize(TimeLimit* time_limit) {
     }
 
     // If the coefficient is too small, we recompute the reduced costs.
+    const Fractional entering_coeff = update_row_.GetCoefficient(entering_col);
     if (std::abs(entering_coeff) < parameters_.dual_small_pivot_threshold() &&
         !reduced_costs_.AreReducedCostsPrecise()) {
       VLOG(1) << "Trying not to pivot by " << entering_coeff;
@@ -2725,9 +2772,10 @@ Status RevisedSimplex::DualMinimize(TimeLimit* time_limit) {
       VLOG(1) << "Do not pivot by " << entering_coeff
               << " because the direction is " << direction_[leaving_row];
       refactorize = true;
-      update_row_.IgnoreUpdatePosition(entering_col);
+      to_ignore.push_back({leaving_row, entering_col});
       continue;
     }
+    to_ignore.clear();
 
     // This test takes place after the check for optimality/feasibility because
     // when running with 0 iterations, we still want to report
@@ -2869,7 +2917,7 @@ void RevisedSimplex::DisplayIterationInfo() const {
                    : variable_values_.ComputeSumOfPrimalInfeasibilities());
     VLOG(1) << (feasibility_phase_ ? "Feasibility" : "Optimization")
             << " phase, iteration # " << iter
-            << ", objective = " << StringPrintf("%.15E", objective);
+            << ", objective = " << absl::StrFormat("%.15E", objective);
   }
 }
 
@@ -2906,13 +2954,13 @@ std::string RevisedSimplex::SimpleVariableInfo(ColIndex col) const {
   std::string output;
   VariableType variable_type = variables_info_.GetTypeRow()[col];
   VariableStatus variable_status = variables_info_.GetStatusRow()[col];
-  StringAppendF(&output, "%d (%s) = %s, %s, %s, [%s,%s]", col.value(),
-                variable_name_[col].c_str(),
-                StringifyWithFlags(variable_values_.Get(col)).c_str(),
-                GetVariableStatusString(variable_status).c_str(),
-                GetVariableTypeString(variable_type).c_str(),
-                StringifyWithFlags(lower_bound_[col]).c_str(),
-                StringifyWithFlags(upper_bound_[col]).c_str());
+  absl::StrAppendFormat(&output, "%d (%s) = %s, %s, %s, [%s,%s]", col.value(),
+                        variable_name_[col],
+                        StringifyWithFlags(variable_values_.Get(col)),
+                        GetVariableStatusString(variable_status),
+                        GetVariableTypeString(variable_type),
+                        StringifyWithFlags(lower_bound_[col]),
+                        StringifyWithFlags(upper_bound_[col]));
   return output;
 }
 

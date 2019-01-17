@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -26,17 +26,17 @@
 #include "ortools/base/commandlineflags.h"
 #include "ortools/base/integral_types.h"
 #include "ortools/base/logging.h"
-#include "ortools/base/timer.h"
 
 #include "ortools/port/file.h"
 
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
+#include "absl/synchronization/mutex.h"
 #include "ortools/base/accurate_sum.h"
 #include "ortools/base/canonical_errors.h"
-#include "ortools/base/join.h"
 #include "ortools/base/map_util.h"
-#include "ortools/base/mutex.h"
+//#include "ortools/base/status_macros.h"
 #include "ortools/base/stl_util.h"
-#include "ortools/base/stringprintf.h"
 #include "ortools/linear_solver/linear_solver.pb.h"
 #include "ortools/linear_solver/model_exporter.h"
 #include "ortools/linear_solver/model_validator.h"
@@ -299,14 +299,21 @@ void* MPSolver::underlying_solver() { return interface_->underlying_solver(); }
 
 // ---- Solver-specific parameters ----
 
+util::Status MPSolver::SetNumThreads(int num_threads) {
+  if (num_threads < 1) {
+    return util::InvalidArgumentError("num_threads must be a positive number.");
+  }
+  const util::Status status = interface_->SetNumThreads(num_threads);
+  if (status.ok()) {
+    num_threads_ = num_threads;
+  }
+  return status;
+}
+
 bool MPSolver::SetSolverSpecificParametersAsString(
     const std::string& parameters) {
   solver_specific_parameter_string_ = parameters;
   return interface_->SetSolverSpecificParametersAsString(parameters);
-}
-
-void MPSolver::SetHint(const PartialVariableAssignment& hint) {
-  interface_->SetHint(hint);
 }
 
 // ----- Solver -----
@@ -410,10 +417,7 @@ MPSolver::MPSolver(const std::string& name,
                    OptimizationProblemType problem_type)
     : name_(name),
       problem_type_(DetourProblemType(problem_type)),
-      time_limit_(0.0) {
-  timer_.Restart();
-  constraint_name_to_index_.reset(nullptr);
-  variable_name_to_index_.reset(nullptr);
+      construction_time_(absl::Now()) {
   interface_.reset(BuildSolverInterface(this));
   if (FLAGS_linear_solver_enable_verbose_output) {
     EnableOutput();
@@ -451,53 +455,84 @@ bool MPSolver::SupportsProblemType(OptimizationProblemType problem_type) {
   return false;
 }
 
-// static
-bool MPSolver::ParseSolverType(const std::string& solver,
-                               MPSolver::OptimizationProblemType* type) {
-  if (solver == "glop") {
-    *type = MPSolver::GLOP_LINEAR_PROGRAMMING;
+// TODO(user): post c++ 14, instead use
+//   std::pair<MPSolver::OptimizationProblemType, const absl::string_view>
+// once pair gets a constexpr constructor.
+namespace {
+struct NamedOptimizationProblemType {
+  MPSolver::OptimizationProblemType problem_type;
+  absl::string_view name;
+};
+}  // namespace
+
+const NamedOptimizationProblemType kOptimizationProblemTypeNames[] = {
+    {MPSolver::GLOP_LINEAR_PROGRAMMING, "glop"},
 #if defined(USE_GLPK)
-  } else if (solver == "glpk_lp") {
-    *type = MPSolver::GLPK_LINEAR_PROGRAMMING;
+    {MPSolver::GLPK_LINEAR_PROGRAMMING, "glpk_lp"},
 #endif
 #if defined(USE_CLP)
-  } else if (solver == "clp") {
-    *type = MPSolver::CLP_LINEAR_PROGRAMMING;
+    {MPSolver::CLP_LINEAR_PROGRAMMING, "clp"},
 #endif
 #if defined(USE_GUROBI)
-  } else if (solver == "gurobi_lp") {
-    *type = MPSolver::GUROBI_LINEAR_PROGRAMMING;
+    {MPSolver::GUROBI_LINEAR_PROGRAMMING, "gurobi_lp"},
 #endif
 #if defined(USE_SCIP)
-  } else if (solver == "scip") {
-    *type = MPSolver::SCIP_MIXED_INTEGER_PROGRAMMING;
+    {MPSolver::SCIP_MIXED_INTEGER_PROGRAMMING, "scip"},
 #endif
-#if defined(USE_GUROBI)
-  } else if (solver == "cbc") {
-    *type = MPSolver::CBC_MIXED_INTEGER_PROGRAMMING;
+#if defined(USE_CBC)
+    {MPSolver::CBC_MIXED_INTEGER_PROGRAMMING, "cbc"},
 #endif
 #if defined(USE_GLPK)
-  } else if (solver == "glpk_mip") {
-    *type = MPSolver::GLPK_MIXED_INTEGER_PROGRAMMING;
-#endif
-#if defined(USE_GUROBI)
-  } else if (solver == "gurobi_mip") {
-    *type = MPSolver::GUROBI_MIXED_INTEGER_PROGRAMMING;
+    {MPSolver::GLPK_MIXED_INTEGER_PROGRAMMING, "glpk_mip"},
 #endif
 #if defined(USE_BOP)
-  } else if (solver == "bop") {
-    *type = MPSolver::BOP_INTEGER_PROGRAMMING;
+    {MPSolver::BOP_INTEGER_PROGRAMMING, "bop"},
 #endif
-  } else {
-    return false;
+#if defined(USE_GUROBI)
+    {MPSolver::GUROBI_MIXED_INTEGER_PROGRAMMING, "gurobi_mip"},
+#endif
+};
+
+// static
+bool MPSolver::ParseSolverType(absl::string_view solver,
+                               MPSolver::OptimizationProblemType* type) {
+  for (const auto& named_solver : kOptimizationProblemTypeNames) {
+    if (named_solver.name == solver) {
+      *type = named_solver.problem_type;
+      return true;
+    }
   }
-  return true;
+  return false;
+}
+
+const absl::string_view ToString(
+    MPSolver::OptimizationProblemType optimization_problem_type) {
+  for (const auto& named_solver : kOptimizationProblemTypeNames) {
+    if (named_solver.problem_type == optimization_problem_type) {
+      return named_solver.name;
+    }
+  }
+  LOG(FATAL) << "Unrecognized solver type: "
+             << static_cast<int>(optimization_problem_type);
+  return "";
+}
+
+bool AbslParseFlag(const absl::string_view text,
+                   MPSolver::OptimizationProblemType* solver_type,
+                   std::string* error) {
+  DCHECK(solver_type != nullptr);
+  DCHECK(error != nullptr);
+  const bool result = MPSolver::ParseSolverType(text, solver_type);
+  if (!result) {
+    *error = absl::StrCat("Solver type: ", text, " does not exist.");
+  }
+  return result;
 }
 
 MPVariable* MPSolver::LookupVariableOrNull(const std::string& var_name) const {
   if (!variable_name_to_index_) GenerateVariableNameIndex();
 
-  std::unordered_map<std::string, int>::const_iterator it =
+  absl::flat_hash_map<std::string, int>::const_iterator it =
       variable_name_to_index_->find(var_name);
   if (it == variable_name_to_index_->end()) return nullptr;
   return variables_[it->second];
@@ -668,10 +703,8 @@ void MPSolver::SolveWithProto(const MPModelRequest& model_request,
     return;
   }
   if (model_request.has_solver_time_limit_seconds()) {
-    // static_cast<int64> avoids a warning with -Wreal-conversion. This
-    // helps catching bugs with unwanted conversions from double to ints.
-    solver.set_time_limit(
-        static_cast<int64>(model_request.solver_time_limit_seconds() * 1000));
+    solver.SetTimeLimit(
+        absl::Seconds(model_request.solver_time_limit_seconds()));
   }
   solver.SetSolverSpecificParametersAsString(
       model_request.solver_specific_parameters());
@@ -706,7 +739,7 @@ void MPSolver::ExportModelToProto(MPModelProto* output_model) const {
   // This step is needed as long as the variable indices are given by the
   // underlying solver at the time of model extraction.
   // TODO(user): remove this step.
-  std::unordered_map<const MPVariable*, int> var_to_index;
+  absl::flat_hash_map<const MPVariable*, int> var_to_index;
   for (int j = 0; j < variables_.size(); ++j) {
     var_to_index[variables_[j]] = j;
   }
@@ -738,12 +771,22 @@ void MPSolver::ExportModelToProto(MPModelProto* output_model) const {
       constraint_proto->add_coefficient(var_and_coeff.second);
     }
   }
+
   output_model->set_maximize(Objective().maximization());
   output_model->set_objective_offset(Objective().offset());
+
+  if (!solution_hint_.empty()) {
+    PartialVariableAssignment* const hint =
+        output_model->mutable_solution_hint();
+    for (const auto& var_value_pair : solution_hint_) {
+      hint->add_var_index(var_value_pair.first->index());
+      hint->add_var_value(var_value_pair.second);
+    }
+  }
 }
 
-util::Status MPSolver::LoadSolutionFromProto(
-    const MPSolutionResponse& response) {
+util::Status MPSolver::LoadSolutionFromProto(const MPSolutionResponse& response,
+                                             double tolerance) {
   interface_->result_status_ = static_cast<ResultStatus>(response.status());
   if (response.status() != MPSOLVER_OPTIMAL &&
       response.status() != MPSOLVER_FEASIBLE) {
@@ -761,34 +804,35 @@ util::Status MPSolver::LoadSolutionFromProto(
         response.variable_value_size(),
         ") does not correspond to the Solver's (", variables_.size(), ")"));
   }
-  double largest_error = 0;
   interface_->ExtractModel();
 
-  // Look further: verify that the variable values are within the bounds.
-  int num_vars_out_of_bounds = 0;
-  const double tolerance = MPSolverParameters::kDefaultPrimalTolerance;
-  int last_offending_var = -1;
-  for (int i = 0; i < response.variable_value_size(); ++i) {
-    const double var_value = response.variable_value(i);
-    MPVariable* var = variables_[i];
-    // TODO(user): Use parameter when they become available in this class.
-    const double lb_error = var->lb() - var_value;
-    const double ub_error = var_value - var->ub();
-    if (lb_error > tolerance || ub_error > tolerance) {
-      ++num_vars_out_of_bounds;
-      largest_error = std::max(largest_error, std::max(lb_error, ub_error));
-      last_offending_var = i;
+  if (tolerance != infinity()) {
+    // Look further: verify that the variable values are within the bounds.
+    double largest_error = 0;
+    int num_vars_out_of_bounds = 0;
+    int last_offending_var = -1;
+    for (int i = 0; i < response.variable_value_size(); ++i) {
+      const double var_value = response.variable_value(i);
+      MPVariable* var = variables_[i];
+      // TODO(user): Use parameter when they become available in this class.
+      const double lb_error = var->lb() - var_value;
+      const double ub_error = var_value - var->ub();
+      if (lb_error > tolerance || ub_error > tolerance) {
+        ++num_vars_out_of_bounds;
+        largest_error = std::max(largest_error, std::max(lb_error, ub_error));
+        last_offending_var = i;
+      }
     }
-  }
-  if (num_vars_out_of_bounds > 0) {
-    return util::InvalidArgumentError(absl::StrCat(
-        "Loaded a solution whose variables matched the solver's, but ",
-        num_vars_out_of_bounds, " of ", variables_.size(),
-        " variables were out of their bounds, by more than the primal"
-        " tolerance which is: ",
-        tolerance, ". Max error: ", largest_error, ", last offendir var is #",
-        last_offending_var, ": '", variables_[last_offending_var]->name(),
-        "'"));
+    if (num_vars_out_of_bounds > 0) {
+      return util::InvalidArgumentError(absl::StrCat(
+          "Loaded a solution whose variables matched the solver's, but ",
+          num_vars_out_of_bounds, " of ", variables_.size(),
+          " variables were out of their bounds, by more than the primal"
+          " tolerance which is: ",
+          tolerance, ". Max error: ", largest_error, ", last offender var is #",
+          last_offending_var, ": '", variables_[last_offending_var]->name(),
+          "'"));
+    }
   }
   for (int i = 0; i < response.variable_value_size(); ++i) {
     variables_[i]->set_solution_value(response.variable_value(i));
@@ -1022,9 +1066,9 @@ std::string PrettyPrintVar(const MPVariable& var) {
     if (lb > ub) {
       return prefix + "∅";
     } else if (lb == ub) {
-      return absl::StrFormat("%s{ %lld }", prefix.c_str(), lb);
+      return absl::StrFormat("%s{ %d }", prefix.c_str(), lb);
     } else {
-      return absl::StrFormat("%s{ %lld, %lld }", prefix.c_str(), lb, ub);
+      return absl::StrFormat("%s{ %d, %d }", prefix.c_str(), lb, ub);
     }
   }
   // Special case: single (non-infinite) real value.
@@ -1067,6 +1111,24 @@ std::string PrettyPrintConstraint(const MPConstraint& constraint) {
                          constraint.ub());
 }
 }  // namespace
+
+util::Status MPSolver::ClampSolutionWithinBounds() {
+  interface_->ExtractModel();
+  for (MPVariable* const variable : variables_) {
+    const double value = variable->solution_value();
+    if (std::isnan(value)) {
+      return util::InvalidArgumentError(
+          absl::StrCat("NaN value for ", PrettyPrintVar(*variable)));
+    }
+    if (value < variable->lb()) {
+      variable->set_solution_value(variable->lb());
+    } else if (value > variable->ub()) {
+      variable->set_solution_value(variable->ub());
+    }
+  }
+  interface_->sync_status_ = MPSolverInterface::SOLUTION_SYNCHRONIZED;
+  return util::OkStatus();
+}
 
 std::vector<double> MPSolver::ComputeConstraintActivities() const {
   // TODO(user): test this failure case.
@@ -1261,9 +1323,18 @@ bool MPSolver::ExportModelAsMpsFormat(bool fixed_format, bool obfuscate,
   return exporter.ExportModelAsMpsFormat(fixed_format, obfuscate, model_str);
 }
 
+void MPSolver::SetHint(
+    std::vector<std::pair<const MPVariable*, double> > hint) {
+  for (const auto& var_value_pair : hint) {
+    CHECK(OwnsVariable(var_value_pair.first))
+        << "hint variable does not belong to this solver";
+  }
+  solution_hint_ = std::move(hint);
+}
+
 void MPSolver::GenerateVariableNameIndex() const {
   if (variable_name_to_index_) return;
-  variable_name_to_index_.reset(new std::unordered_map<std::string, int>(1));
+  variable_name_to_index_ = absl::flat_hash_map<std::string, int>();
   for (const MPVariable* const var : variables_) {
     gtl::InsertOrDie(&*variable_name_to_index_, var->name(), var->index());
   }
@@ -1271,7 +1342,7 @@ void MPSolver::GenerateVariableNameIndex() const {
 
 void MPSolver::GenerateConstraintNameIndex() const {
   if (constraint_name_to_index_) return;
-  constraint_name_to_index_.reset(new std::unordered_map<std::string, int>(1));
+  constraint_name_to_index_ = absl::flat_hash_map<std::string, int>();
   for (const MPConstraint* const cst : constraints_) {
     gtl::InsertOrDie(&*constraint_name_to_index_, cst->name(), cst->index());
   }
@@ -1339,7 +1410,7 @@ bool MPSolverInterface::CheckSolutionIsSynchronized() const {
   if (sync_status_ != SOLUTION_SYNCHRONIZED) {
     LOG(DFATAL)
         << "The model has been changed since the solution was last computed."
-        << " MPSolverInterface::status_ = " << sync_status_;
+        << " MPSolverInterface::sync_status_ = " << sync_status_;
     return false;
   }
   return true;
@@ -1432,22 +1503,27 @@ void MPSolverInterface::SetMIPParameters(const MPSolverParameters& param) {
 }
 
 void MPSolverInterface::SetUnsupportedDoubleParam(
-    MPSolverParameters::DoubleParam param) const {
+    MPSolverParameters::DoubleParam param) {
   LOG(WARNING) << "Trying to set an unsupported parameter: " << param << ".";
 }
 void MPSolverInterface::SetUnsupportedIntegerParam(
-    MPSolverParameters::IntegerParam param) const {
+    MPSolverParameters::IntegerParam param) {
   LOG(WARNING) << "Trying to set an unsupported parameter: " << param << ".";
 }
 void MPSolverInterface::SetDoubleParamToUnsupportedValue(
-    MPSolverParameters::DoubleParam param, double value) const {
+    MPSolverParameters::DoubleParam param, double value) {
   LOG(WARNING) << "Trying to set a supported parameter: " << param
                << " to an unsupported value: " << value;
 }
 void MPSolverInterface::SetIntegerParamToUnsupportedValue(
-    MPSolverParameters::IntegerParam param, int value) const {
+    MPSolverParameters::IntegerParam param, int value) {
   LOG(WARNING) << "Trying to set a supported parameter: " << param
                << " to an unsupported value: " << value;
+}
+
+util::Status MPSolverInterface::SetNumThreads(int num_threads) {
+  return util::UnimplementedError(
+      absl::StrFormat("SetNumThreads() not supported by %s.", SolverVersion()));
 }
 
 bool MPSolverInterface::SetSolverSpecificParametersAsString(
@@ -1480,13 +1556,13 @@ bool MPSolverInterface::SetSolverSpecificParametersAsString(
                       extension.c_str());
   bool no_error_so_far = true;
   if (no_error_so_far) {
-    no_error_so_far = FileSetContents(filename, parameters).ok();
+    no_error_so_far = PortableFileSetContents(filename, parameters).ok();
   }
   if (no_error_so_far) {
     no_error_so_far = ReadParameterFile(filename);
     // We need to clean up the file even if ReadParameterFile() returned
     // false. In production we can continue even if the deletion failed.
-    if (!DeleteFile(filename).ok()) {
+    if (!PortableDeleteFile(filename).ok()) {
       LOG(DFATAL) << "Couldn't delete temporary parameters file: " << filename;
     }
   }
@@ -1513,7 +1589,8 @@ std::string MPSolverInterface::ValidFileExtensionForParameterFile() const {
 
 const double MPSolverParameters::kDefaultRelativeMipGap = 1e-4;
 // For the primal and dual tolerances, choose the same default as CLP and GLPK.
-const double MPSolverParameters::kDefaultPrimalTolerance = 1e-7;
+const double MPSolverParameters::kDefaultPrimalTolerance =
+    operations_research::kDefaultPrimalTolerance;
 const double MPSolverParameters::kDefaultDualTolerance = 1e-7;
 const MPSolverParameters::PresolveValues MPSolverParameters::kDefaultPresolve =
     MPSolverParameters::PRESOLVE_ON;

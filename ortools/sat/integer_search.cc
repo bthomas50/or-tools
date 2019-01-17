@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -135,7 +135,7 @@ std::function<LiteralIndex()> FollowHint(
         // since we know that this variable is not fixed, one of the two
         // alternative must reduce the domain.
         //
-        // TODO(user): De-dup with logic in ExploitIntegerLpSolution.
+        // TODO(user): De-dup with logic in ExploitLpSolution.
         if (value >= lb && value < ub) {
           const Literal le = encoder->GetOrCreateAssociatedLiteral(
               IntegerLiteral::LowerOrEqual(integer_var, value));
@@ -157,7 +157,7 @@ std::function<LiteralIndex()> FollowHint(
   };
 }
 
-std::function<LiteralIndex()> ExploitIntegerLpSolution(
+std::function<LiteralIndex()> ExploitLpSolution(
     std::function<LiteralIndex()> heuristic, Model* model) {
   auto* encoder = model->GetOrCreate<IntegerEncoder>();
   auto* trail = model->GetOrCreate<Trail>();
@@ -165,6 +165,7 @@ std::function<LiteralIndex()> ExploitIntegerLpSolution(
   auto* lp_dispatcher = model->GetOrCreate<LinearProgrammingDispatcher>();
   auto* lp_constraints =
       model->GetOrCreate<LinearProgrammingConstraintCollection>();
+  const SatParameters& parameters = *(model->GetOrCreate<SatParameters>());
 
   // Use the normal heuristic if the LP(s) do not seem to cover enough variables
   // to be relevant.
@@ -176,7 +177,7 @@ std::function<LiteralIndex()> ExploitIntegerLpSolution(
     }
     const int num_integer_variables =
         model->GetOrCreate<IntegerTrail>()->NumIntegerVariables().value() / 2;
-    if (num_integer_variables > 4 * num_lp_variables) return heuristic;
+    if (num_integer_variables > 2 * num_lp_variables) return heuristic;
   }
 
   bool last_decision_followed_lp = false;
@@ -193,25 +194,31 @@ std::function<LiteralIndex()> ExploitIntegerLpSolution(
       return kNoLiteralIndex;
     }
 
-    bool all_lp_integers = true;
+    bool lp_solution_is_exploitable = true;
     double obj = 0.0;
+    // TODO(user,user): When we have more than one LP, their set of variable
+    // is always disjoint. So we could still change the polarity if the next
+    // variable we branch on is part of a LP that has a solution.
     for (LinearProgrammingConstraint* lp : *lp_constraints) {
-      if (!lp->HasSolution() || !lp->SolutionIsInteger()) {
-        all_lp_integers = false;
+      if (!lp->HasSolution() ||
+          !(parameters.exploit_all_lp_solution() || lp->SolutionIsInteger())) {
+        lp_solution_is_exploitable = false;
         break;
       }
       obj += lp->SolutionObjectiveValue();
     }
-    if (all_lp_integers) {
+    if (lp_solution_is_exploitable) {
       if (!last_decision_followed_lp || obj != old_obj) {
         old_level = trail->CurrentDecisionLevel();
         old_obj = obj;
         VLOG(2) << "Integer LP solution at level:" << old_level
                 << " obj:" << old_obj;
       }
-      for (IntegerLiteral l : encoder->GetIntegerLiterals(Literal(decision))) {
+      for (const IntegerLiteral l :
+           encoder->GetIntegerLiterals(Literal(decision))) {
         const IntegerVariable positive_var =
             VariableIsPositive(l.var) ? l.var : NegationOf(l.var);
+        if (integer_trail->IsCurrentlyIgnored(positive_var)) continue;
         LinearProgrammingConstraint* lp =
             gtl::FindWithDefault(*lp_dispatcher, positive_var, nullptr);
         if (lp != nullptr) {
@@ -295,8 +302,9 @@ SatSolver::Status SolveIntegerProblemWithLazyEncoding(
       } else {
         search = SequentialSearch({SatSolverHeuristic(model), next_decision});
       }
-      if (parameters.exploit_integer_lp_solution()) {
-        search = ExploitIntegerLpSolution(search, model);
+      if (parameters.exploit_integer_lp_solution() ||
+          parameters.exploit_all_lp_solution()) {
+        search = ExploitLpSolution(search, model);
       }
       return SolveProblemWithPortfolioSearch(
           {search}, {SatSolverRestartPolicy(model)}, model);
@@ -322,7 +330,7 @@ SatSolver::Status SolveIntegerProblemWithLazyEncoding(
           SequentialSearch({SatSolverHeuristic(model), next_decision}));
       if (parameters.exploit_integer_lp_solution()) {
         for (auto& ref : portfolio) {
-          ref = ExploitIntegerLpSolution(ref, model);
+          ref = ExploitLpSolution(ref, model);
         }
       }
       auto default_restart_policy = SatSolverRestartPolicy(model);
@@ -338,7 +346,11 @@ SatSolver::Status SolveIntegerProblemWithLazyEncoding(
            *(model->GetOrCreate<LinearProgrammingConstraintCollection>())) {
         lp_heuristics.push_back(ct->LPReducedCostAverageBranching());
       }
-      if (lp_heuristics.empty()) break;  // Fall back to automatic search.
+      if (lp_heuristics.empty()) {  // Revert to automatic search.
+        return SolveProblemWithPortfolioSearch(
+            {SequentialSearch({next_decision, SatSolverHeuristic(model)})},
+            {SatSolverRestartPolicy(model)}, model);
+      }
       auto portfolio = CompleteHeuristics(
           lp_heuristics,
           SequentialSearch({SatSolverHeuristic(model), next_decision}));
@@ -385,8 +397,10 @@ SatSolver::Status SolveProblemWithPortfolioSearch(
       model->Get<ObjectiveSynchronizationHelper>();
   const bool synchronize_objective =
       solver->AssumptionLevel() == 0 && helper != nullptr &&
-      helper->get_external_bound != nullptr &&
-      helper->objective_var != kNoIntegerVariable;
+      helper->get_external_best_objective != nullptr &&
+      helper->objective_var != kNoIntegerVariable &&
+      model->GetOrCreate<SatParameters>()->share_objective_bounds() &&
+      model->GetOrCreate<ObjectiveSynchronizationHelper>()->parallel_mode;
 
   // Note that it is important to do the level-zero propagation if it wasn't
   // already done because EnqueueDecisionAndBackjumpOnConflict() assumes that
@@ -410,26 +424,41 @@ SatSolver::Status SolveProblemWithPortfolioSearch(
     }
 
     // Check external objective, and restart if a better one is supplied.
+    // This code has to be run before the level_zero_propagate_callbacks are
+    // triggered, as one of them will actually import the new objective bounds.
     // TODO(user): Maybe do not check this at each decision.
+    // TODO(user): Move restart code to the restart part?
     if (synchronize_objective) {
-      const double external_bound = helper->get_external_bound();
-      if (std::isfinite(external_bound)) {
-        IntegerValue best_bound(helper->UnscaledObjective(external_bound));
-        IntegerTrail* const integer_trail = model->GetOrCreate<IntegerTrail>();
-        if (best_bound <= integer_trail->UpperBound(helper->objective_var)) {
-          if (!solver->RestoreSolverToAssumptionLevel()) {
-            return solver->UnsatStatus();
-          }
-          DCHECK_EQ(solver->CurrentDecisionLevel(), 0);
-          if (!integer_trail->Enqueue(
-                  IntegerLiteral::LowerOrEqual(helper->objective_var,
-                                               best_bound - 1),
-                  {}, {})) {
-            return SatSolver::INFEASIBLE;
-          }
-          if (!solver->FinishPropagation()) {
-            return solver->UnsatStatus();
-          }
+      const double external_bound = helper->get_external_best_objective();
+      CHECK(helper->get_external_best_bound != nullptr);
+      const double external_best_bound = helper->get_external_best_bound();
+      IntegerTrail* const integer_trail = model->GetOrCreate<IntegerTrail>();
+      IntegerValue current_objective_upper_bound(
+          integer_trail->UpperBound(helper->objective_var));
+      IntegerValue current_objective_lower_bound(
+          integer_trail->LowerBound(helper->objective_var));
+      IntegerValue new_objective_upper_bound(
+          std::isfinite(external_bound)
+              ? helper->UnscaledObjective(external_bound) - 1
+              : current_objective_upper_bound.value());
+      IntegerValue new_objective_lower_bound(
+          std::isfinite(external_best_bound)
+              ? helper->UnscaledObjective(external_best_bound)
+              : current_objective_lower_bound.value());
+      if (new_objective_upper_bound < current_objective_upper_bound ||
+          new_objective_lower_bound > current_objective_lower_bound) {
+        if (!solver->RestoreSolverToAssumptionLevel()) {
+          return solver->UnsatStatus();
+        }
+      }
+    }
+
+    if (solver->CurrentDecisionLevel() == 0) {
+      auto* level_zero_callbacks =
+          model->GetOrCreate<LevelZeroCallbackHelper>();
+      for (const auto& cb : level_zero_callbacks->callbacks) {
+        if (!cb()) {
+          return SatSolver::INFEASIBLE;
         }
       }
     }
@@ -458,6 +487,22 @@ SatSolver::Status SolveIntegerProblemWithLazyEncoding(Model* model) {
   }
   return SolveIntegerProblemWithLazyEncoding(
       {}, FirstUnassignedVarAtItsMinHeuristic(all_variables, model), model);
+}
+
+// Logging helper.
+void LogNewSolution(const std::string& event_or_solution_count,
+                    double time_in_seconds, double obj_lb, double obj_ub,
+                    const std::string& solution_info) {
+  LOG(INFO) << absl::StrFormat("#%-5s %6.2fs  obj:[%g,%g]  %s",
+                               event_or_solution_count, time_in_seconds, obj_lb,
+                               obj_ub, solution_info);
+}
+
+void LogNewSatSolution(const std::string& event_or_solution_count,
+                       double time_in_seconds,
+                       const std::string& solution_info) {
+  LOG(INFO) << absl::StrFormat("#%-5s %6.2fs  %s", event_or_solution_count,
+                               time_in_seconds, solution_info);
 }
 
 }  // namespace sat

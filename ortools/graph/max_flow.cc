@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,7 +15,8 @@
 
 #include <algorithm>
 
-#include "ortools/base/stringprintf.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/str_format.h"
 #include "ortools/graph/graph.h"
 #include "ortools/graph/graphs.h"
 
@@ -62,15 +63,15 @@ SimpleMaxFlow::Status SimpleMaxFlow::Solve(NodeIndex source, NodeIndex sink) {
   if (source >= num_nodes_ || sink >= num_nodes_) {
     return OPTIMAL;
   }
-  underlying_graph_.reset(new Graph(num_nodes_, num_arcs));
+  underlying_graph_ = absl::make_unique<Graph>(num_nodes_, num_arcs);
   underlying_graph_->AddNode(source);
   underlying_graph_->AddNode(sink);
   for (int arc = 0; arc < num_arcs; ++arc) {
     underlying_graph_->AddArc(arc_tail_[arc], arc_head_[arc]);
   }
   underlying_graph_->Build(&arc_permutation_);
-  underlying_max_flow_.reset(
-      new GenericMaxFlow<Graph>(underlying_graph_.get(), source, sink));
+  underlying_max_flow_ = absl::make_unique<GenericMaxFlow<Graph>>(
+      underlying_graph_.get(), source, sink);
   for (ArcIndex arc = 0; arc < num_arcs; ++arc) {
     ArcIndex permuted_arc =
         arc < arc_permutation_.size() ? arc_permutation_[arc] : arc;
@@ -320,13 +321,13 @@ std::string GenericMaxFlow<Graph>::DebugString(const std::string& context,
   const NodeIndex head = Head(arc);
   return absl::StrFormat(
       "%s Arc %d, from %d to %d, "
-      "Capacity = %lld, Residual capacity = %lld, "
-      "Flow = residual capacity for reverse arc = %lld, "
+      "Capacity = %d, Residual capacity = %d, "
+      "Flow = residual capacity for reverse arc = %d, "
       "Height(tail) = %d, Height(head) = %d, "
-      "Excess(tail) = %lld, Excess(head) = %lld",
-      context.c_str(), arc, tail, head, Capacity(arc),
-      residual_arc_capacity_[arc], Flow(arc), node_potential_[tail],
-      node_potential_[head], node_excess_[tail], node_excess_[head]);
+      "Excess(tail) = %d, Excess(head) = %d",
+      context, arc, tail, head, Capacity(arc), residual_arc_capacity_[arc],
+      Flow(arc), node_potential_[tail], node_potential_[head],
+      node_excess_[tail], node_excess_[head]);
 }
 
 template <typename Graph>

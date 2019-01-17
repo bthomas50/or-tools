@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -71,7 +71,7 @@
 #include <map>
 #include <string>
 #ifdef HAS_PERF_SUBSYSTEM
-#include "absl/ortools/base/str_replace.h"
+#include "absl/strings/str_replace.h"
 #include "exegesis/exegesis/itineraries/perf_subsystem.h"
 #include "ortools/util/time_limit.h"
 #endif  // HAS_PERF_SUBSYSTEM
@@ -232,10 +232,10 @@ class TimeDistribution : public DistributionStat {
   static double CyclesToSeconds(double num_cycles);
 
   // Adds a time in seconds to this distribution.
-  void AddTimeInSec(double value);
+  void AddTimeInSec(double seconds);
 
   // Adds a time in CPU cycles to this distribution.
-  void AddTimeInCycles(double value);
+  void AddTimeInCycles(double cycles);
 
   // Starts the timer in preparation of a StopTimerAndAddElapsedTime().
   inline void StartTimer() { timer_.Restart(); }

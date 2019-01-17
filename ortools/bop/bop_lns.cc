@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,11 +17,11 @@
 #include <string>
 #include <vector>
 
+#include "absl/memory/memory.h"
 #include "google/protobuf/text_format.h"
 #include "ortools/base/cleanup.h"
 #include "ortools/base/commandlineflags.h"
 #include "ortools/base/stl_util.h"
-#include "ortools/base/stringprintf.h"
 #include "ortools/glop/lp_solver.h"
 #include "ortools/lp_data/lp_print_utils.h"
 #include "ortools/sat/boolean_problem.h"
@@ -70,13 +70,13 @@ BopOptimizerBase::Status BopCompleteLNSOptimizer::SynchronizeIfNeeded(
   state_update_stamp_ = problem_state.update_stamp();
 
   // Load the current problem to the solver.
-  sat_solver_.reset(new sat::SatSolver());
+  sat_solver_ = absl::make_unique<sat::SatSolver>();
   const BopOptimizerBase::Status status =
       LoadStateProblemToSatSolver(problem_state, sat_solver_.get());
   if (status != BopOptimizerBase::CONTINUE) return status;
 
   // Add the constraint that forces the solver to look for a solution
-  // at a distance <= num_relaxed_vars from the curent one. Note that not all
+  // at a distance <= num_relaxed_vars from the current one. Note that not all
   // the terms appear in this constraint.
   //
   // TODO(user): if the current solution didn't change, there is no need to
@@ -127,11 +127,10 @@ BopOptimizerBase::Status BopCompleteLNSOptimizer::Optimize(
 
   CHECK(sat_solver_ != nullptr);
   const double initial_dt = sat_solver_->deterministic_time();
-  auto advance_dt = ::operations_research::util::MakeCleanup(
-      [initial_dt, this, &time_limit]() {
-        time_limit->AdvanceDeterministicTime(sat_solver_->deterministic_time() -
-                                             initial_dt);
-      });
+  auto advance_dt = ::gtl::MakeCleanup([initial_dt, this, &time_limit]() {
+    time_limit->AdvanceDeterministicTime(sat_solver_->deterministic_time() -
+                                         initial_dt);
+  });
 
   // Set the parameters for this run.
   // TODO(user): Because of this, we actually loose the perfect continuity
@@ -240,8 +239,8 @@ BopOptimizerBase::Status BopAdaptiveLNSOptimizer::Optimize(
 
   // Set-up a sat_propagator_ cleanup task to catch all the exit cases.
   const double initial_dt = sat_propagator_->deterministic_time();
-  auto sat_propagator_cleanup = ::operations_research::util::MakeCleanup(
-      [initial_dt, this, &learned_info, &time_limit]() {
+  auto sat_propagator_cleanup =
+      ::gtl::MakeCleanup([initial_dt, this, &learned_info, &time_limit]() {
         if (!sat_propagator_->IsModelUnsat()) {
           sat_propagator_->SetAssumptionLevel(0);
           sat_propagator_->RestoreSolverToAssumptionLevel();

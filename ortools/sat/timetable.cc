@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -84,9 +84,6 @@ void TimeTablingPerTask::RegisterWith(GenericLiteralWatcher* watcher) {
 }
 
 bool TimeTablingPerTask::Propagate() {
-  // TODO(user): understand why the following line creates a bug.
-  // if (num_tasks_to_sweep_ == 0) return true;
-
   // Save the current state of the set of tasks.
   rev_repository_int_.SaveState(&forward_num_tasks_to_sweep_);
   rev_repository_int_.SaveState(&backward_num_tasks_to_sweep_);
@@ -286,8 +283,8 @@ void TimeTablingPerTask::ReverseProfile() {
 
 bool TimeTablingPerTask::SweepAllTasks(bool is_forward) {
   // Tasks with a lower or equal demand will not be pushed.
-  const IntegerValue demand_threshold =
-      CapSub(CapacityMax(), profile_max_height_);
+  const IntegerValue demand_threshold(
+      CapSub(CapacityMax().value(), profile_max_height_.value()));
 
   // Select the correct members depending on the direction.
   int& num_tasks =
@@ -366,11 +363,6 @@ bool TimeTablingPerTask::SweepTask(int task_id) {
   // rectangle before being pushed.
   IntegerValue last_initial_conflict = kMinIntegerValue;
 
-  // True if the task has been scheduled during a conflicting profile rectangle.
-  // This means that the task is either part of the profile rectangle or that we
-  // have an overload in which case we remove the case if it is optional.
-  bool overload = false;
-
   // Push the task from left to right until it does not overlap any conflicting
   // rectangle. Pushing the task may push the end of its compulsory part on the
   // right but will not change its start. The main loop of the propagator will
@@ -388,9 +380,16 @@ bool TimeTablingPerTask::SweepTask(int task_id) {
     // are not updated yet.
     new_start_min = profile_[rec_id + 1].start;  // i.e. profile_[rec_id].end
     if (start_max < new_start_min) {
-      new_start_min = start_max;
-      overload = !IsInProfile(task_id);
+      if (IsInProfile(task_id)) {
+        // Because the task is part of the profile, we cannot push it further.
+        new_start_min = start_max;
+      } else {
+        // We have a conflict or we can push the task absence. In both cases
+        // we don't need more than start_max + 1 in the explanation below.
+        new_start_min = start_max + 1;
+      }
     }
+
     new_end_min = std::max(new_end_min, new_start_min + duration_min);
     limit = std::min(start_max, new_end_min);
 
@@ -421,9 +420,6 @@ bool TimeTablingPerTask::SweepTask(int task_id) {
     profile_changed_ = true;
   }
 
-  // Explain that the task should be absent or explain the resource overload.
-  if (overload) return OverloadOrRemove(task_id, start_max);
-
   return true;
 }
 
@@ -450,11 +446,12 @@ void TimeTablingPerTask::AddProfileReason(IntegerValue left,
                                           IntegerValue right) {
   for (int i = 0; i < num_profile_tasks_; ++i) {
     const int t = profile_tasks_[i];
-    const IntegerValue start_max = helper_->StartMax(t);
-    const IntegerValue end_min = helper_->EndMin(t);
 
-    // Do not consider the task if it does not overlap [left, right).
-    if (end_min <= left || right <= start_max) continue;
+    // Do not consider the task if it does not overlap for sure (left, right).
+    const IntegerValue start_max = helper_->StartMax(t);
+    if (right <= start_max) continue;
+    const IntegerValue end_min = helper_->EndMin(t);
+    if (end_min <= left) continue;
 
     helper_->AddPresenceReason(t);
     helper_->AddStartMaxReason(t, std::max(left, start_max));
@@ -473,34 +470,6 @@ bool TimeTablingPerTask::IncreaseCapacity(IntegerValue time,
   AddProfileReason(time, time + 1);
   return helper_->PushIntegerLiteral(
       IntegerLiteral::GreaterOrEqual(capacity_var_, new_min));
-}
-
-bool TimeTablingPerTask::OverloadOrRemove(int task_id, IntegerValue time) {
-  helper_->ClearReason();
-
-  helper_->MutableIntegerReason()->push_back(
-      integer_trail_->UpperBoundAsLiteral(capacity_var_));
-
-  AddProfileReason(time, time + 1);
-
-  // We know that task_id was not part of the profile when it was built. We thus
-  // have to add it manualy since it will not be added by AddProfileReason.
-  helper_->AddStartMaxReason(task_id, time);
-  helper_->AddEndMinReason(task_id, time + 1);
-  helper_->MutableIntegerReason()->push_back(
-      integer_trail_->LowerBoundAsLiteral(demand_vars_[task_id]));
-
-  // Explain the resource overload if the task cannot be removed.
-  if (helper_->IsPresent(task_id)) {
-    helper_->AddPresenceReason(task_id);
-    return helper_->PushIntegerLiteral(
-        IntegerLiteral::GreaterOrEqual(capacity_var_, CapacityMax() + 1));
-  }
-
-  // Remove the task to prevent the overload.
-  helper_->PushTaskAbsence(task_id);
-
-  return true;
 }
 
 }  // namespace sat

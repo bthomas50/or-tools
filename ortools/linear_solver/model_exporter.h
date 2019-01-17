@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,7 +15,6 @@
 #define OR_TOOLS_LINEAR_SOLVER_MODEL_EXPORTER_H_
 
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "ortools/base/hash.h"
@@ -53,13 +52,15 @@ class MPModelProtoExporter {
   // http://lpsolve.sourceforge.net/5.5/CPLEX-format.htm
   // http://tinyurl.com/cplex-lp-format
   // http://www.gurobi.com/documentation/5.1/reference-manual/node871
-  bool ExportModelAsLpFormat(bool obfuscated, std::string* model_str);
+  bool ExportModelAsLpFormat(bool obfuscated, std::string* output);
 
   // Outputs the current model (variables, constraints, objective) as a
   // std::string encoded in MPS file format, using the "fixed" MPS format if
   // possible, and the "free" MPS format otherwise.
   //
-  // Returns false if some error has occurred during execution.
+  // Returns false if some error has occurred during execution. Models with
+  // maximization objectives trigger an error, because MPS can encode only
+  // minimization problems.
   //
   // If fixed_format is true, the method tries to use the MPS fixed format (the
   // use of which is discouraged as coefficients are printed with less
@@ -83,7 +84,7 @@ class MPModelProtoExporter {
   // Gurobi's description:
   // http://www.gurobi.com/documentation/5.1/reference-manual/node869
   bool ExportModelAsMpsFormat(bool fixed_format, bool obfuscated,
-                              std::string* model_str);
+                              std::string* output);
 
  private:
   // Computes the number of continuous, integer and binary variables.

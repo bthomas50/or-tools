@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,16 +16,15 @@
 #include <algorithm>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
+#include "absl/memory/memory.h"
+#include "absl/strings/match.h"
+#include "absl/strings/str_format.h"
 #include "ortools/base/commandlineflags.h"
 #include "ortools/base/hash.h"
 #include "ortools/base/integral_types.h"
 #include "ortools/base/logging.h"
-#include "ortools/base/port.h"
-#include "ortools/base/stringprintf.h"
-#include "ortools/base/strutil.h"
 #include "ortools/base/timer.h"
 #include "ortools/linear_solver/linear_solver.h"
 
@@ -77,7 +76,7 @@ class CLPInterface : public MPSolverInterface {
   void SetObjectiveCoefficient(const MPVariable* const variable,
                                double coefficient) override;
   // Change the constant term in the linear objective.
-  void SetObjectiveOffset(double value) override;
+  void SetObjectiveOffset(double offset) override;
   // Clear the objective from all its terms.
   void ClearObjective() override;
 
@@ -149,7 +148,7 @@ CLPInterface::CLPInterface(MPSolver* const solver)
 CLPInterface::~CLPInterface() {}
 
 void CLPInterface::Reset() {
-  clp_.reset(new ClpSimplex);
+  clp_ = absl::make_unique<ClpSimplex>();
   clp_->setOptimizationDirection(maximize_ ? -1 : 1);
   ResetExtractionInformation();
 }
@@ -435,7 +434,7 @@ MPSolver::ResultStatus CLPInterface::Solve(const MPSolverParameters& param) {
     }
 
     ExtractModel();
-    VLOG(1) << StringPrintf("Model built in %.3f seconds.", timer.Get());
+    VLOG(1) << absl::StrFormat("Model built in %.3f seconds.", timer.Get());
 
     // Time limit.
     if (solver_->time_limit() != 0) {
@@ -447,13 +446,13 @@ MPSolver::ResultStatus CLPInterface::Solve(const MPSolverParameters& param) {
 
     // Start from a fresh set of default parameters and set them to
     // specified values.
-    options_.reset(new ClpSolve);
+    options_ = absl::make_unique<ClpSolve>();
     SetParameters(param);
 
     // Solve
     timer.Restart();
     clp_->initialSolve(*options_);
-    VLOG(1) << StringPrintf("Solved in %.3f seconds.", timer.Get());
+    VLOG(1) << absl::StrFormat("Solved in %.3f seconds.", timer.Get());
 
     // Check the status: optimal, infeasible, etc.
     int tmp_status = clp_->status();

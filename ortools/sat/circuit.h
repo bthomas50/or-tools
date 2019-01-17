@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,7 +18,7 @@
 #include <memory>
 #include <vector>
 
-#include <unordered_map>
+#include "absl/container/flat_hash_map.h"
 #include "ortools/base/int_type.h"
 #include "ortools/base/integral_types.h"
 #include "ortools/base/logging.h"
@@ -82,7 +82,7 @@ class CircuitPropagator : PropagatorInterface, ReversibleInterface {
   // TODO(user): for large dense graph, using a matrix is faster and uses less
   // memory. If the need arise we can have the two implementations.
   std::vector<Literal> self_arcs_;
-  std::unordered_map<std::pair<int, int>, Literal> graph_;
+  absl::flat_hash_map<std::pair<int, int>, Literal> graph_;
 
   // Data used to interpret the watch indices passed to IncrementalPropagate().
   struct Arc {
@@ -167,8 +167,7 @@ class CircuitCoveringPropagator : PropagatorInterface, ReversibleInterface {
 // ============================================================================
 
 // Changes the node indices so that we get a graph in [0, num_nodes) where every
-// nodes has at least one incoming or outgoing arcs. Returns the number of
-// nodes.
+// node has at least one incoming or outgoing arc. Returns the number of nodes.
 int ReindexArcs(std::vector<int>* tails, std::vector<int>* heads,
                 std::vector<Literal>* literals);
 

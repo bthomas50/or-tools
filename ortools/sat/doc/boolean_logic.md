@@ -27,7 +27,7 @@ from __future__ import print_function
 from ortools.sat.python import cp_model
 
 
-def LiteralSample():
+def LiteralSampleSat():
   model = cp_model.CpModel()
   x = model.NewBoolVar('x')
   not_x = x.Not()
@@ -35,33 +35,22 @@ def LiteralSample():
   print(not_x)
 
 
-LiteralSample()
+LiteralSampleSat()
 ```
 
 ### C++ code
 
 ```cpp
-#include "ortools/sat/cp_model.pb.h"
-#include "ortools/sat/cp_model_solver.h"
-#include "ortools/sat/cp_model_utils.h"
-#include "ortools/sat/model.h"
+#include "ortools/sat/cp_model.h"
 
 namespace operations_research {
 namespace sat {
 
-void LiteralSample() {
-  CpModelProto cp_model;
+void LiteralSampleSat() {
+  CpModelBuilder cp_model;
 
-  auto new_boolean_variable = [&cp_model]() {
-    const int index = cp_model.variables_size();
-    IntegerVariableProto* const var = cp_model.add_variables();
-    var->add_domain(0);
-    var->add_domain(1);
-    return index;
-  };
-
-  const int x = new_boolean_variable();
-  const int not_x = NegatedRef(x);
+  const BoolVar x = cp_model.NewBoolVar().WithName("x");
+  const BoolVar not_x = Not(x);
   LOG(INFO) << "x = " << x << ", not(x) = " << not_x;
 }
 
@@ -69,9 +58,30 @@ void LiteralSample() {
 }  // namespace operations_research
 
 int main() {
-  operations_research::sat::LiteralSample();
+  operations_research::sat::LiteralSampleSat();
 
   return EXIT_SUCCESS;
+}
+```
+
+### Java code
+
+```java
+import com.google.ortools.sat.CpModel;
+import com.google.ortools.sat.IntVar;
+import com.google.ortools.sat.Literal;
+
+/** Code sample to demonstrate Boolean variable and literals. */
+public class LiteralSampleSat {
+
+  static { System.loadLibrary("jniortools"); }
+
+  public static void main(String[] args) throws Exception {
+    CpModel model = new CpModel();
+    IntVar x = model.newBoolVar("x");
+    Literal notX = x.not();
+    System.out.println(notX.getShortString());
+  }
 }
 ```
 
@@ -81,17 +91,13 @@ int main() {
 using System;
 using Google.OrTools.Sat;
 
-public class CodeSamplesSat
+public class LiteralSampleSat
 {
-  static void LiteralSample()
+  static void Main()
   {
     CpModel model = new CpModel();
     IntVar x = model.NewBoolVar("x");
     ILiteral not_x = x.Not();
-  }
-
-  static void Main() {
-    LiteralSample();
   }
 }
 ```
@@ -120,7 +126,7 @@ from __future__ import print_function
 from ortools.sat.python import cp_model
 
 
-def BoolOrSample():
+def BoolOrSampleSat():
   model = cp_model.CpModel()
 
   x = model.NewBoolVar('x')
@@ -129,51 +135,53 @@ def BoolOrSample():
   model.AddBoolOr([x, y.Not()])
 
 
-BoolOrSample()
+BoolOrSampleSat()
 ```
 
 ### C++ code
 
 ```cpp
-#include "ortools/sat/cp_model.pb.h"
-#include "ortools/sat/cp_model_solver.h"
-#include "ortools/sat/cp_model_utils.h"
-#include "ortools/sat/model.h"
+#include "ortools/sat/cp_model.h"
 
 namespace operations_research {
 namespace sat {
 
-void BoolOrSample() {
-  CpModelProto cp_model;
+void BoolOrSampleSat() {
+  CpModelBuilder cp_model;
 
-  auto new_boolean_variable = [&cp_model]() {
-    const int index = cp_model.variables_size();
-    IntegerVariableProto* const var = cp_model.add_variables();
-    var->add_domain(0);
-    var->add_domain(1);
-    return index;
-  };
-
-  auto add_bool_or = [&cp_model](const std::vector<int>& literals) {
-    BoolArgumentProto* const bool_or =
-        cp_model.add_constraints()->mutable_bool_or();
-    for (const int lit : literals) {
-      bool_or->add_literals(lit);
-    }
-  };
-
-  const int x = new_boolean_variable();
-  const int y = new_boolean_variable();
-  add_bool_or({x, NegatedRef(y)});
+  const BoolVar x = cp_model.NewBoolVar();
+  const BoolVar y = cp_model.NewBoolVar();
+  cp_model.AddBoolOr({x, Not(y)});
 }
 
 }  // namespace sat
 }  // namespace operations_research
 
 int main() {
-  operations_research::sat::BoolOrSample();
+  operations_research::sat::BoolOrSampleSat();
 
   return EXIT_SUCCESS;
+}
+```
+
+### Java code
+
+```java
+import com.google.ortools.sat.CpModel;
+import com.google.ortools.sat.IntVar;
+import com.google.ortools.sat.Literal;
+
+/** Code sample to demonstrates a simple Boolean constraint. */
+public class BoolOrSampleSat {
+
+  static { System.loadLibrary("jniortools"); }
+
+  public static void main(String[] args) throws Exception {
+    CpModel model = new CpModel();
+    IntVar x = model.newBoolVar("x");
+    IntVar y = model.newBoolVar("y");
+    model.addBoolOr(new Literal[] {x, y.not()});
+  }
 }
 ```
 
@@ -183,18 +191,16 @@ int main() {
 using System;
 using Google.OrTools.Sat;
 
-public class CodeSamplesSat
+public class BoolOrSampleSat
 {
-  static void BoolOrSample()
+  static void Main()
   {
     CpModel model = new CpModel();
-    IntVar x = model.NewBoolVar("x");
-    IntVar y = model.newBoolVar("y");
-    model.AddBoolOr(new ILiteral[] {x, y.Not()});
-  }
 
-  static void Main() {
-    BoolOrSample();
+    IntVar x = model.NewBoolVar("x");
+    IntVar y = model.NewBoolVar("y");
+
+    model.AddBoolOr(new ILiteral[] { x, y.Not() });
   }
 }
 ```
@@ -228,7 +234,7 @@ from __future__ import print_function
 from ortools.sat.python import cp_model
 
 
-def ReifiedSample():
+def ReifiedSampleSat():
   """Showcase creating a reified constraint."""
   model = cp_model.CpModel()
 
@@ -248,67 +254,85 @@ def ReifiedSample():
   model.AddBoolOr([b.Not(), y.Not()])
 
 
-ReifiedSample()
+ReifiedSampleSat()
 ```
 
 ### C++ code
 
 ```cpp
-#include "ortools/sat/cp_model.pb.h"
-#include "ortools/sat/cp_model_solver.h"
-#include "ortools/sat/cp_model_utils.h"
-#include "ortools/sat/model.h"
+#include "ortools/sat/cp_model.h"
 
 namespace operations_research {
 namespace sat {
 
-void ReifiedSample() {
-  CpModelProto cp_model;
+void ReifiedSampleSat() {
+  CpModelBuilder cp_model;
 
-  auto new_boolean_variable = [&cp_model]() {
-    const int index = cp_model.variables_size();
-    IntegerVariableProto* const var = cp_model.add_variables();
-    var->add_domain(0);
-    var->add_domain(1);
-    return index;
-  };
-
-  auto add_bool_or = [&cp_model](const std::vector<int>& literals) {
-    BoolArgumentProto* const bool_or =
-        cp_model.add_constraints()->mutable_bool_or();
-    for (const int lit : literals) {
-      bool_or->add_literals(lit);
-    }
-  };
-
-  auto add_reified_bool_and = [&cp_model](const std::vector<int>& literals,
-                                          const int literal) {
-    ConstraintProto* const ct = cp_model.add_constraints();
-    ct->add_enforcement_literal(literal);
-    for (const int lit : literals) {
-      ct->mutable_bool_and()->add_literals(lit);
-    }
-  };
-
-  const int x = new_boolean_variable();
-  const int y = new_boolean_variable();
-  const int b = new_boolean_variable();
+  const BoolVar x = cp_model.NewBoolVar();
+  const BoolVar y = cp_model.NewBoolVar();
+  const BoolVar b = cp_model.NewBoolVar();
 
   // First version using a half-reified bool and.
-  add_reified_bool_and({x, NegatedRef(y)}, b);
+  cp_model.AddBoolAnd({x, Not(y)}).OnlyEnforceIf(b);
 
-  // Second version using bool or.
-  add_bool_or({NegatedRef(b), x});
-  add_bool_or({NegatedRef(b), NegatedRef(y)});
+  // Second version using implications.
+  cp_model.AddImplication(b, x);
+  cp_model.AddImplication(b, Not(y));
+
+  // Third version using bool or.
+  cp_model.AddBoolOr({Not(b), x});
+  cp_model.AddBoolOr({Not(b), Not(y)});
 }
 
 }  // namespace sat
 }  // namespace operations_research
 
 int main() {
-  operations_research::sat::ReifiedSample();
+  operations_research::sat::ReifiedSampleSat();
 
   return EXIT_SUCCESS;
+}
+```
+
+### Java code
+
+```java
+import com.google.ortools.sat.CpModel;
+import com.google.ortools.sat.IntVar;
+import com.google.ortools.sat.Literal;
+
+/**
+ * Reification is the action of associating a Boolean variable to a constraint. This boolean
+ * enforces or prohibits the constraint according to the value the Boolean variable is fixed to.
+ *
+ * <p>Half-reification is defined as a simple implication: If the Boolean variable is true, then the
+ * constraint holds, instead of an complete equivalence.
+ *
+ * <p>The SAT solver offers half-reification. To implement full reification, two half-reified
+ * constraints must be used.
+ */
+public class ReifiedSampleSat {
+
+  static { System.loadLibrary("jniortools"); }
+
+  public static void main(String[] args) throws Exception {
+    CpModel model = new CpModel();
+
+    IntVar x = model.newBoolVar("x");
+    IntVar y = model.newBoolVar("y");
+    IntVar b = model.newBoolVar("b");
+
+    // Version 1: a half-reified boolean and.
+    model.addBoolAnd(new Literal[] {x, y.not()}).onlyEnforceIf(b);
+
+    // Version 2: implications.
+    model.addImplication(b, x);
+    model.addImplication(b, y.not());
+
+    // Version 3: boolean or.
+    model.addBoolOr(new Literal[] {b.not(), x});
+    model.addBoolOr(new Literal[] {b.not(), y.not()});
+  }
 }
 ```
 
@@ -318,9 +342,9 @@ int main() {
 using System;
 using Google.OrTools.Sat;
 
-public class CodeSamplesSat
+public class ReifiedSampleSat
 {
-  static void ReifiedSample()
+  static void Main()
   {
     CpModel model = new CpModel();
 
@@ -338,10 +362,6 @@ public class CodeSamplesSat
     // Third version using bool or.
     model.AddBoolOr(new ILiteral[] {b.Not(), x});
     model.AddBoolOr(new ILiteral[] {b.Not(), y.Not()});
-  }
-
-  static void Main() {
-    ReifiedSample();
   }
 }
 ```

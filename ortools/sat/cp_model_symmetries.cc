@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,12 +15,12 @@
 
 #include <memory>
 
-#include <unordered_map>
+#include "absl/container/flat_hash_map.h"
+#include "absl/memory/memory.h"
 #include "google/protobuf/repeated_field.h"
 #include "ortools/algorithms/find_graph_symmetries.h"
 #include "ortools/base/hash.h"
 #include "ortools/base/map_util.h"
-#include "ortools/base/memory.h"
 #include "ortools/sat/cp_model_utils.h"
 
 namespace operations_research {
@@ -50,7 +50,7 @@ class IdGenerator {
   }
 
  private:
-  std::unordered_map<std::vector<int64>, int, VectorHash> id_map_;
+  absl::flat_hash_map<std::vector<int64>, int, VectorHash> id_map_;
 };
 
 // Appends values in `repeated_field` to `vector`.
@@ -85,15 +85,6 @@ std::unique_ptr<Graph> GenerateGraphForSymmetryDetection(
     const CpModelProto& problem,
     std::vector<int>* initial_equivalence_classes) {
   CHECK(initial_equivalence_classes != nullptr);
-
-  // If the model contains any variables with enforcement literals, return here.
-  for (const IntegerVariableProto& variable : problem.variables()) {
-    if (variable.enforcement_literal_size() > 0) {
-      // TODO(user): support enforcement literals on variables.
-      LOG(ERROR) << "Unsupported enforcement literal on variables.";
-      return nullptr;
-    }
-  }
 
   const int num_variables = problem.variables_size();
   auto graph = absl::make_unique<Graph>();

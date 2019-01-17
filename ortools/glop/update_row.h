@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -91,6 +91,10 @@ class UpdateRow {
   double DeterministicTime() const {
     return DeterministicTimeForFpOperations(num_operations_);
   }
+
+  // This returns the asked unit row left inverse. It temporarily invalidate
+  // the class state by calling Invalidate().
+  const ScatteredRow& ComputeAndGetUnitRowLeftInverse(RowIndex leaving_row);
 
  private:
   // Computes the left inverse of the given unit row, and stores it in

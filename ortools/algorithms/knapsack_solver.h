@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -62,6 +62,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/memory/memory.h"
 #include "ortools/base/basictypes.h"
 #include "ortools/base/integral_types.h"
 #include "ortools/base/logging.h"
@@ -149,7 +150,7 @@ class KnapsackSolver {
   // obtained might not be optimal if the limit is reached.
   void set_time_limit(double time_limit_seconds) {
     time_limit_seconds_ = time_limit_seconds;
-    time_limit_.reset(new TimeLimit(time_limit_seconds_));
+    time_limit_ = absl::make_unique<TimeLimit>(time_limit_seconds_);
   }
 
  private:

@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -86,7 +86,7 @@ SatSolver::Status SolveWithFuMalik(LogBehavior log,
 //
 // Ansotegui, C., Bonet, M.L., Levy, J.: Solving (weighted) partial MaxSAT
 // through satisﬁability testing. In: Proc. of the 12th Int. Conf. on Theory and
-// Applications of Satisﬁability Testing (SAT’09). pp. 427–440 (2009)
+// Applications of Satisﬁability Testing (SAT’09). pp. 427-440 (2009)
 SatSolver::Status SolveWithWPM1(LogBehavior log,
                                 const LinearBooleanProblem& problem,
                                 SatSolver* solver, std::vector<bool>* solution);

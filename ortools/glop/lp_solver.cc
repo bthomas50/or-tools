@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -19,11 +19,11 @@
 
 #include "ortools/base/commandlineflags.h"
 #include "ortools/base/integral_types.h"
-#include "ortools/base/stringprintf.h"
 #include "ortools/base/timer.h"
 
-#include "ortools/base/join.h"
-#include "ortools/base/strutil.h"
+#include "absl/memory/memory.h"
+#include "absl/strings/match.h"
+#include "absl/strings/str_format.h"
 #include "ortools/glop/preprocessor.h"
 #include "ortools/glop/status.h"
 #include "ortools/lp_data/lp_types.h"
@@ -87,7 +87,7 @@ void DumpLinearProgramIfRequiredByFlags(const LinearProgram& linear_program,
   }
   const int file_num =
       FLAGS_lp_dump_file_number >= 0 ? FLAGS_lp_dump_file_number : num;
-  StringAppendF(&filename, "-%06d.pb", file_num);
+  absl::StrAppendFormat(&filename, "-%06d.pb", file_num);
   const std::string filespec = absl::StrCat(FLAGS_lp_dump_dir, "/", filename);
   MPModelProto proto;
   LinearProgramToMPModelProto(linear_program, &proto);
@@ -172,8 +172,7 @@ ProblemStatus LPSolver::SolveWithTimeLimit(const LinearProgram& lp,
   current_linear_program_.PopulateFromLinearProgram(lp);
 
   // Preprocess.
-  MainLpPreprocessor preprocessor;
-  preprocessor.SetParameters(parameters_);
+  MainLpPreprocessor preprocessor(&parameters_);
   preprocessor.SetTimeLimit(time_limit);
 
   const bool postsolve_is_needed = preprocessor.Run(&current_linear_program_);
@@ -241,7 +240,7 @@ void LPSolver::SetInitialBasis(
     }
   }
   if (revised_simplex_ == nullptr) {
-    revised_simplex_.reset(new RevisedSimplex());
+    revised_simplex_ = absl::make_unique<RevisedSimplex>();
   }
   revised_simplex_->LoadStateForNextSolve(state);
   if (parameters_.use_preprocessing()) {
@@ -288,11 +287,11 @@ ProblemStatus LPSolver::LoadAndVerifySolution(const LinearProgram& lp,
   const Fractional primal_objective_value = ComputeObjective(lp);
   const Fractional dual_objective_value = ComputeDualObjective(lp);
   VLOG(1) << "Primal objective (before moving primal/dual values) = "
-          << StringPrintf("%.15E",
-                          ProblemObjectiveValue(lp, primal_objective_value));
+          << absl::StrFormat("%.15E",
+                             ProblemObjectiveValue(lp, primal_objective_value));
   VLOG(1) << "Dual objective (before moving primal/dual values) = "
-          << StringPrintf("%.15E",
-                          ProblemObjectiveValue(lp, dual_objective_value));
+          << absl::StrFormat("%.15E",
+                             ProblemObjectiveValue(lp, dual_objective_value));
 
   // Eventually move the primal/dual values inside their bounds.
   if (status == ProblemStatus::OPTIMAL &&
@@ -304,7 +303,7 @@ ProblemStatus LPSolver::LoadAndVerifySolution(const LinearProgram& lp,
   // The reported objective to the user.
   problem_objective_value_ = ProblemObjectiveValue(lp, ComputeObjective(lp));
   VLOG(1) << "Primal objective (after moving primal/dual values) = "
-          << StringPrintf("%.15E", problem_objective_value_);
+          << absl::StrFormat("%.15E", problem_objective_value_);
 
   ComputeReducedCosts(lp);
   ComputeConstraintActivities(lp);
@@ -524,7 +523,7 @@ void LPSolver::RunRevisedSimplexIfNeeded(ProblemSolution* solution,
   current_linear_program_.ClearTransposeMatrix();
   if (solution->status != ProblemStatus::INIT) return;
   if (revised_simplex_ == nullptr) {
-    revised_simplex_.reset(new RevisedSimplex());
+    revised_simplex_ = absl::make_unique<RevisedSimplex>();
   }
   revised_simplex_->SetParameters(parameters_);
   if (revised_simplex_->Solve(current_linear_program_, time_limit).ok()) {

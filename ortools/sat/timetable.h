@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -82,10 +82,6 @@ class TimeTablingPerTask : public PropagatorInterface {
   // Increases the minimum capacity to new_min and explain it. The reason is all
   // the mandatory parts that overlap time.
   bool IncreaseCapacity(IntegerValue time, IntegerValue new_min);
-
-  // Explains the resource overload at time or removes task_id if it is
-  // optional.
-  bool OverloadOrRemove(int task_id, IntegerValue time);
 
   // Explains the state of the profile in the time interval [left, right). The
   // reason is all the mandatory parts that overlap the interval. The current

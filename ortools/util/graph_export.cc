@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,11 +15,11 @@
 
 #include <memory>
 
+#include "absl/strings/str_format.h"
 #include "ortools/base/file.h"
 #include "ortools/base/logging.h"
 #include "ortools/base/macros.h"
 #include "ortools/base/status.h"
-#include "ortools/base/stringprintf.h"
 
 namespace operations_research {
 
@@ -52,20 +52,19 @@ class DotSyntax : public GraphSyntax {
   std::string Node(const std::string& name, const std::string& label,
                    const std::string& shape,
                    const std::string& color) override {
-    return StringPrintf("%s [shape=%s label=\"%s\" color=%s]\n", name.c_str(),
-                        shape.c_str(), label.c_str(), color.c_str());
+    return absl::StrFormat("%s [shape=%s label=\"%s\" color=%s]\n", name, shape,
+                           label, color);
   }
 
   // Adds one link in the generated graph.
   std::string Link(const std::string& source, const std::string& destination,
                    const std::string& label) override {
-    return StringPrintf("%s -> %s [label=%s]\n", source.c_str(),
-                        destination.c_str(), label.c_str());
+    return absl::StrFormat("%s -> %s [label=%s]\n", source, destination, label);
   }
 
   // File header.
   std::string Header(const std::string& name) override {
-    return StringPrintf("graph %s {\n", name.c_str());
+    return absl::StrFormat("graph %s {\n", name);
   }
 
   // File footer.
@@ -79,7 +78,7 @@ class GmlSyntax : public GraphSyntax {
   std::string Node(const std::string& name, const std::string& label,
                    const std::string& shape,
                    const std::string& color) override {
-    return StringPrintf(
+    return absl::StrFormat(
         "  node [\n"
         "    name \"%s\"\n"
         "    label \"%s\"\n"
@@ -88,27 +87,27 @@ class GmlSyntax : public GraphSyntax {
         "      fill \"%s\"\n"
         "    ]\n"
         "  ]\n",
-        name.c_str(), label.c_str(), shape.c_str(), color.c_str());
+        name, label, shape, color);
   }
 
   // Adds one link in the generated graph.
   std::string Link(const std::string& source, const std::string& destination,
                    const std::string& label) override {
-    return StringPrintf(
+    return absl::StrFormat(
         "  edge [\n"
         "    label \"%s\"\n"
         "    source \"%s\"\n"
         "    target \"%s\"\n"
         "  ]\n",
-        label.c_str(), source.c_str(), destination.c_str());
+        label, source, destination);
   }
 
   // File header.
   std::string Header(const std::string& name) override {
-    return StringPrintf(
+    return absl::StrFormat(
         "graph [\n"
         "  name \"%s\"\n",
-        name.c_str());
+        name);
   }
 
   // File footer.

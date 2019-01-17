@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -13,10 +13,11 @@
 
 #include "ortools/glop/preprocessor.h"
 
-#include "ortools/base/stringprintf.h"
+#include "absl/strings/str_format.h"
 #include "ortools/glop/revised_simplex.h"
 #include "ortools/glop/status.h"
 #include "ortools/lp_data/lp_data_utils.h"
+#include "ortools/lp_data/lp_types.h"
 #include "ortools/lp_data/lp_utils.h"
 #include "ortools/lp_data/matrix_utils.h"
 
@@ -28,7 +29,7 @@ using ::util::Reverse;
 namespace {
 // Returns an interval as an human readable std::string for debugging.
 std::string IntervalString(Fractional lb, Fractional ub) {
-  return StringPrintf("[%g, %g]", lb, ub);
+  return absl::StrFormat("[%g, %g]", lb, ub);
 }
 
 #if defined(_MSC_VER)
@@ -39,9 +40,9 @@ double trunc(double d) { return d > 0 ? floor(d) : ceil(d); }
 // --------------------------------------------------------
 // Preprocessor
 // --------------------------------------------------------
-Preprocessor::Preprocessor()
+Preprocessor::Preprocessor(const GlopParameters* parameters)
     : status_(ProblemStatus::INIT),
-      parameters_(),
+      parameters_(*parameters),
       in_mip_context_(false),
       time_limit_(TimeLimit::Infinite().get()) {}
 Preprocessor::~Preprocessor() {}
@@ -50,9 +51,9 @@ Preprocessor::~Preprocessor() {}
 // MainLpPreprocessor
 // --------------------------------------------------------
 
-#define RUN_PREPROCESSOR(name)                                           \
-  RunAndPushIfRelevant(std::unique_ptr<Preprocessor>(new name()), #name, \
-                       time_limit_, lp)
+#define RUN_PREPROCESSOR(name)                                                \
+  RunAndPushIfRelevant(std::unique_ptr<Preprocessor>(new name(&parameters_)), \
+                       #name, time_limit_, lp)
 
 bool MainLpPreprocessor::Run(LinearProgram* lp) {
   RETURN_VALUE_IF_NULL(lp, false);
@@ -101,7 +102,6 @@ bool MainLpPreprocessor::Run(LinearProgram* lp) {
     // preprocessor so that the rhs/objective of the dual are with a good
     // magnitude.
     RUN_PREPROCESSOR(DualizerPreprocessor);
-    RUN_PREPROCESSOR(SolowHalimPreprocessor);
     if (old_stack_size != preprocessors_.size()) {
       RUN_PREPROCESSOR(SingletonPreprocessor);
       RUN_PREPROCESSOR(FreeConstraintPreprocessor);
@@ -131,7 +131,6 @@ void MainLpPreprocessor::RunAndPushIfRelevant(
   if (status_ != ProblemStatus::INIT || time_limit->LimitReached()) return;
 
   const double start_time = time_limit->GetElapsedTime();
-  preprocessor->SetParameters(parameters_);
   preprocessor->SetTimeLimit(time_limit);
 
   // No need to run the preprocessor if the lp is empty.
@@ -145,8 +144,8 @@ void MainLpPreprocessor::RunAndPushIfRelevant(
     const EntryIndex new_num_entries = lp->num_entries();
     const double preprocess_time = time_limit->GetElapsedTime() - start_time;
     VLOG(1) << absl::StrFormat(
-        "%s(%fs): %d(%d) rows, %d(%d) columns, %lld(%lld) entries.",
-        name.c_str(), preprocess_time, lp->num_constraints().value(),
+        "%s(%fs): %d(%d) rows, %d(%d) columns, %d(%d) entries.", name,
+        preprocess_time, lp->num_constraints().value(),
         (lp->num_constraints() - initial_num_rows_).value(),
         lp->num_variables().value(),
         (lp->num_variables() - initial_num_cols_).value(),
@@ -2859,6 +2858,14 @@ void SingletonColumnSignPreprocessor::RecoverSolution(
 bool DoubletonEqualityRowPreprocessor::Run(LinearProgram* lp) {
   SCOPED_INSTRUCTION_COUNT(time_limit_);
   RETURN_VALUE_IF_NULL(lp, false);
+
+  // This is needed at postsolve.
+  //
+  // TODO(user): Get rid of the FIXED status instead to avoid spending
+  // time/memory for no good reason here.
+  saved_row_lower_bounds_ = lp->constraint_lower_bounds();
+  saved_row_upper_bounds_ = lp->constraint_upper_bounds();
+
   // Note that we don't update the transpose during this preprocessor run.
   const SparseMatrix& original_transpose = lp->GetTransposeSparseMatrix();
 
@@ -3037,14 +3044,14 @@ void DoubletonEqualityRowPreprocessor::RecoverSolution(
       // When the modified variable is either basic or free, we keep it as is,
       // and simply make the deleted one basic.
       case VariableStatus::FREE:
-        FALLTHROUGH_INTENDED;
+        ABSL_FALLTHROUGH_INTENDED;
       case VariableStatus::BASIC:
         // Several code paths set the deleted column as basic. The code that
         // sets its value in that case is below, after the switch() block.
         solution->variable_statuses[r.col[DELETED]] = VariableStatus::BASIC;
         break;
       case VariableStatus::AT_LOWER_BOUND:
-        FALLTHROUGH_INTENDED;
+        ABSL_FALLTHROUGH_INTENDED;
       case VariableStatus::AT_UPPER_BOUND: {
         // The bound was induced by a bound of one of the two original
         // variables. Put that original variable at its bound, and make
@@ -3094,6 +3101,32 @@ void DoubletonEqualityRowPreprocessor::RecoverSolution(
         r.objective_coefficient[col_choice] -
         PreciseScalarProduct(solution->dual_values, r.column[col_choice]);
     solution->dual_values[r.row] = current_reduced_cost / r.coeff[col_choice];
+  }
+
+  // Fix potential bad ConstraintStatus::FIXED_VALUE statuses.
+  FixConstraintWithFixedStatuses(saved_row_lower_bounds_,
+                                 saved_row_upper_bounds_, solution);
+}
+
+void FixConstraintWithFixedStatuses(const DenseColumn& row_lower_bounds,
+                                    const DenseColumn& row_upper_bounds,
+                                    ProblemSolution* solution) {
+  const RowIndex num_rows = solution->constraint_statuses.size();
+  DCHECK_EQ(row_lower_bounds.size(), num_rows);
+  DCHECK_EQ(row_upper_bounds.size(), num_rows);
+  for (RowIndex row(0); row < num_rows; ++row) {
+    if (solution->constraint_statuses[row] != ConstraintStatus::FIXED_VALUE) {
+      continue;
+    }
+    if (row_lower_bounds[row] == row_upper_bounds[row]) continue;
+
+    // We need to fix the status and we just need to make sure that the bound we
+    // choose satisfies the LP optimality conditions.
+    if (solution->dual_values[row] > 0) {
+      solution->constraint_statuses[row] = ConstraintStatus::AT_LOWER_BOUND;
+    } else {
+      solution->constraint_statuses[row] = ConstraintStatus::AT_UPPER_BOUND;
+    }
   }
 }
 
@@ -3441,7 +3474,7 @@ void ShiftVariableBoundsPreprocessor::RecoverSolution(
     } else {
       switch (solution->variable_statuses[col]) {
         case VariableStatus::FIXED_VALUE:
-          FALLTHROUGH_INTENDED;
+          ABSL_FALLTHROUGH_INTENDED;
         case VariableStatus::AT_LOWER_BOUND:
           solution->primal_values[col] = variable_initial_lbs_[col];
           break;
@@ -3506,7 +3539,7 @@ void ScalingPreprocessor::RecoverSolution(ProblemSolution* solution) const {
   for (ColIndex col(0); col < num_cols; ++col) {
     switch (solution->variable_statuses[col]) {
       case VariableStatus::AT_UPPER_BOUND:
-        FALLTHROUGH_INTENDED;
+        ABSL_FALLTHROUGH_INTENDED;
       case VariableStatus::FIXED_VALUE:
         solution->primal_values[col] = variable_upper_bounds_[col];
         break;
@@ -3514,7 +3547,7 @@ void ScalingPreprocessor::RecoverSolution(ProblemSolution* solution) const {
         solution->primal_values[col] = variable_lower_bounds_[col];
         break;
       case VariableStatus::FREE:
-        FALLTHROUGH_INTENDED;
+        ABSL_FALLTHROUGH_INTENDED;
       case VariableStatus::BASIC:
         break;
     }
@@ -3589,150 +3622,6 @@ void AddSlackVariablesPreprocessor::RecoverSolution(
   // Drop the primal values and variable statuses for slack variables.
   solution->primal_values.resize(first_slack_col_, 0.0);
   solution->variable_statuses.resize(first_slack_col_, VariableStatus::FREE);
-}
-
-// --------------------------------------------------------
-// SolowHalimPreprocessor
-// --------------------------------------------------------
-bool SolowHalimPreprocessor::Run(LinearProgram* lp) {
-  RETURN_VALUE_IF_NULL(lp, false);
-  if (!parameters_.use_solowhalim()) {
-    return false;
-  }
-
-  // mip context not implemented
-  // TODO : in order to manage mip context we must take care
-  // of truncated offsets
-  if (in_mip_context_) {
-    return false;
-  }
-
-  const bool lp_is_maximization_problem = lp->IsMaximizationProblem();
-  const ColIndex num_cols = lp->num_variables();
-  const RowIndex num_rows = lp->num_constraints();
-  ColIndex num_shifted_cols(0);
-  ColIndex num_shifted_opposite_cols(0);
-
-  variable_initial_lbs_.assign(num_cols, 0.0);
-  variable_initial_ubs_.assign(num_cols, 0.0);
-  for (ColIndex col(0); col < num_cols; ++col) {
-    variable_initial_lbs_[col] = lp->variable_lower_bounds()[col];
-    variable_initial_ubs_[col] = lp->variable_upper_bounds()[col];
-  }
-
-  KahanSum objective_offset;
-  gtl::ITIVector<RowIndex, KahanSum> row_offsets(num_rows.value());
-  column_transform_.resize(num_cols.value(), NOT_MODIFIED);
-  for (ColIndex col(0); col < num_cols; ++col) {
-    const Fractional coeff = lp->objective_coefficients()[col];
-    if (coeff != 0.0) {
-      bool coeff_opposite_direction =
-          ((coeff < 0.0 && !lp_is_maximization_problem) ||
-           (coeff > 0.0 && lp_is_maximization_problem));
-
-      const Fractional ub = lp->variable_upper_bounds()[col];
-      const Fractional lb = lp->variable_lower_bounds()[col];
-      if (IsFinite(ub) && IsFinite(lb)) {
-        ColumnTransformType column_transform = NOT_MODIFIED;
-        double shift_value = 0.0;
-
-        if (coeff_opposite_direction) {
-          SparseColumn* mutable_sparse_column = lp->GetMutableSparseColumn(col);
-          for (const SparseColumn::Entry e : (*mutable_sparse_column)) {
-            row_offsets[e.row()].Add(e.coefficient() * ub);
-          }
-          mutable_sparse_column->MultiplyByConstant(-1);
-          lp->SetObjectiveCoefficient(col, -coeff);
-          shift_value = ub;
-          column_transform = SHIFTED_OPPOSITE_DIRECTION;
-          num_shifted_opposite_cols++;
-        } else {
-          const SparseColumn& sparse_column = lp->GetSparseColumn(col);
-          for (const SparseColumn::Entry e : sparse_column) {
-            row_offsets[e.row()].Add(e.coefficient() * lb);
-          }
-          shift_value = lb;
-          column_transform = SHIFTED;
-          num_shifted_cols++;
-        }
-
-        if (column_transform != NOT_MODIFIED) {
-          column_transform_[col] = column_transform;
-          objective_offset.Add(coeff * shift_value);
-          lp->SetVariableBounds(col, 0, ub - lb);
-        }
-      }
-    }
-  }
-
-  for (RowIndex row(0); row < num_rows; ++row) {
-    lp->SetConstraintBounds(
-        row, lp->constraint_lower_bounds()[row] - row_offsets[row].Value(),
-        lp->constraint_upper_bounds()[row] - row_offsets[row].Value());
-  }
-  lp->SetObjectiveOffset(lp->objective_offset() + objective_offset.Value());
-
-  VLOG(1) << "Shifted " << num_shifted_cols << " variables.";
-  VLOG(1) << "Shifted opposite " << num_shifted_opposite_cols << " variables.";
-  VLOG(1) << "Objective offset : " << objective_offset.Value();
-
-  return true;
-}
-
-void SolowHalimPreprocessor::RecoverSolution(ProblemSolution* solution) const {
-  RETURN_IF_NULL(solution);
-  const ColIndex num_cols = solution->variable_statuses.size();
-  for (ColIndex col(0); col < num_cols; ++col) {
-    VLOG(2) << "col = " << col << "\t" << column_transform_[col];
-    VLOG(2) << "\tinitial range : \t [" << variable_initial_lbs_[col] << " ; "
-            << variable_initial_ubs_[col] << "]";
-    VLOG(2) << "\tstatus : " << solution->variable_statuses[col]
-            << "\t raw value : " << solution->primal_values[col];
-
-    switch (column_transform_[col]) {
-      case NOT_MODIFIED:
-        break;
-      case SHIFTED:
-        switch (solution->variable_statuses[col]) {
-          case VariableStatus::AT_LOWER_BOUND:
-            solution->primal_values[col] = variable_initial_lbs_[col];
-            break;
-          case VariableStatus::AT_UPPER_BOUND:
-            solution->primal_values[col] = variable_initial_ubs_[col];
-            break;
-          case VariableStatus::BASIC:
-            solution->primal_values[col] =
-                variable_initial_lbs_[col] + solution->primal_values[col];
-            break;
-          case VariableStatus::FIXED_VALUE:
-            FALLTHROUGH_INTENDED;
-          case VariableStatus::FREE:
-            break;
-        }
-        break;
-      case SHIFTED_OPPOSITE_DIRECTION:
-        switch (solution->variable_statuses[col]) {
-          case VariableStatus::AT_LOWER_BOUND:
-            solution->primal_values[col] = variable_initial_ubs_[col];
-            solution->variable_statuses[col] = VariableStatus::AT_UPPER_BOUND;
-            break;
-          case VariableStatus::AT_UPPER_BOUND:
-            solution->primal_values[col] = variable_initial_lbs_[col];
-            solution->variable_statuses[col] = VariableStatus::AT_LOWER_BOUND;
-            break;
-          case VariableStatus::BASIC:
-            solution->primal_values[col] =
-                variable_initial_ubs_[col] - solution->primal_values[col];
-            break;
-          case VariableStatus::FIXED_VALUE:
-            FALLTHROUGH_INTENDED;
-          case VariableStatus::FREE:
-            break;
-        }
-        break;
-    }
-    VLOG(2) << " recover value : " << solution->primal_values[col];
-  }
 }
 
 }  // namespace glop

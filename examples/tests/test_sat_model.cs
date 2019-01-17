@@ -1,4 +1,4 @@
-// Copyright 2010-2017 Google
+// Copyright 2010-2018 Google LLC
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -109,7 +109,7 @@ public class CsTestCpOperator
 
     CpSolver solver = new CpSolver();
     CpSolverStatus status = solver.Solve(model);
-    Check(status == CpSolverStatus.ModelSat, "Wrong status after solve");
+    Check(status == CpSolverStatus.Feasible, "Wrong status after solve");
     Console.WriteLine("v1 = {0}", solver.Value(v1));
     Console.WriteLine("v2 = {0}", solver.Value(v2));
   }
