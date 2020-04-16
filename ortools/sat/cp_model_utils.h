@@ -43,16 +43,13 @@ inline int EnforcementLiteral(const ConstraintProto& ct) {
 
 // Collects all the references used by a constraint. This function is used in a
 // few places to have a "generic" code dealing with constraints. Note that the
-// enforcement_literal is NOT counted here.
-//
-// TODO(user): replace this by constant version of the Apply...() functions?
+// enforcement_literal is NOT counted here and that the vectors can have
+// duplicates.
 struct IndexReferences {
-  absl::flat_hash_set<int> variables;
-  absl::flat_hash_set<int> literals;
-  absl::flat_hash_set<int> intervals;
+  std::vector<int> variables;
+  std::vector<int> literals;
 };
-void AddReferencesUsedByConstraint(const ConstraintProto& ct,
-                                   IndexReferences* output);
+IndexReferences GetReferencesUsedByConstraint(const ConstraintProto& ct);
 
 // Applies the given function to all variables/literals/intervals indices of the
 // constraint. This function is used in a few places to have a "generic" code
@@ -69,7 +66,11 @@ void ApplyToAllIntervalIndices(const std::function<void(int*)>& function,
 std::string ConstraintCaseName(ConstraintProto::ConstraintCase constraint_case);
 
 // Returns the sorted list of variables used by a constraint.
+// Note that this include variable used as a literal.
 std::vector<int> UsedVariables(const ConstraintProto& ct);
+
+// Returns the sorted list of interval used by a constraint.
+std::vector<int> UsedIntervals(const ConstraintProto& ct);
 
 // Returns true if a proto.domain() contain the given value.
 // The domain is expected to be encoded as a sorted disjoint interval list.
@@ -85,6 +86,7 @@ bool DomainInProtoContains(const ProtoWithDomain& proto, int64 value) {
 template <typename ProtoWithDomain>
 void FillDomainInProto(const Domain& domain, ProtoWithDomain* proto) {
   proto->clear_domain();
+  proto->mutable_domain()->Reserve(domain.NumIntervals());
   for (const ClosedInterval& interval : domain) {
     proto->add_domain(interval.start);
     proto->add_domain(interval.end);
@@ -94,11 +96,12 @@ void FillDomainInProto(const Domain& domain, ProtoWithDomain* proto) {
 // Reads a Domain from the domain field of a proto.
 template <typename ProtoWithDomain>
 Domain ReadDomainFromProto(const ProtoWithDomain& proto) {
-  std::vector<ClosedInterval> intervals;
-  for (int i = 0; i < proto.domain_size(); i += 2) {
-    intervals.push_back({proto.domain(i), proto.domain(i + 1)});
-  }
-  return Domain::FromIntervals(intervals);
+#if defined(__PORTABLE_PLATFORM__)
+  return Domain::FromFlatIntervals(
+      {proto.domain().begin(), proto.domain().end()});
+#else
+  return Domain::FromFlatSpanOfIntervals(proto.domain());
+#endif
 }
 
 // Returns the list of values in a given domain.
@@ -117,12 +120,31 @@ std::vector<int64> AllValuesInDomain(const ProtoWithDomain& proto) {
   return result;
 }
 
-// Scale back a objective value to a double value from the original model.
+// Scales back a objective value to a double value from the original model.
 inline double ScaleObjectiveValue(const CpObjectiveProto& proto, int64 value) {
-  double result = value + proto.offset();
+  double result = static_cast<double>(value);
+  if (value == kint64min) result = -std::numeric_limits<double>::infinity();
+  if (value == kint64max) result = std::numeric_limits<double>::infinity();
+  result += proto.offset();
   if (proto.scaling_factor() == 0) return result;
   return proto.scaling_factor() * result;
 }
+
+// Removes the objective scaling and offset from the given value.
+inline double UnscaleObjectiveValue(const CpObjectiveProto& proto,
+                                    double value) {
+  double result = value;
+  if (proto.scaling_factor() != 0) {
+    result /= proto.scaling_factor();
+  }
+  return result - proto.offset();
+}
+
+// Computes the "inner" objective of a response that contains a solution.
+// This is the objective without offset and scaling. Call ScaleObjectiveValue()
+// to get the user facing objective.
+int64 ComputeInnerObjective(const CpObjectiveProto& objective,
+                            const CpSolverResponse& response);
 
 }  // namespace sat
 }  // namespace operations_research

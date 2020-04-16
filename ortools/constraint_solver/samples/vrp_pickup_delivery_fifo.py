@@ -94,6 +94,7 @@ def create_data_model():
             536, 194, 798, 0
         ],
     ]
+    # [START pickups_deliveries]
     data['pickups_deliveries'] = [
         [1, 6],
         [2, 10],
@@ -104,6 +105,7 @@ def create_data_model():
         [13, 12],
         [16, 14],
     ]
+    # [END pickups_deliveries]
     data['num_vehicles'] = 4
     data['depot'] = 0
     return data
@@ -113,7 +115,6 @@ def create_data_model():
 # [START solution_printer]
 def print_solution(data, manager, routing, assignment):
     """Prints assignment on console."""
-    print('Objective: {}'.format(assignment.ObjectiveValue()))
     total_distance = 0
     for vehicle_id in range(data['num_vehicles']):
         index = routing.Start(vehicle_id)
@@ -142,8 +143,8 @@ def main():
 
     # Create the routing index manager.
     # [START index_manager]
-    manager = pywrapcp.RoutingIndexManager(
-        len(data['distance_matrix']), data['num_vehicles'], data['depot'])
+    manager = pywrapcp.RoutingIndexManager(len(data['distance_matrix']),
+                                           data['num_vehicles'], data['depot'])
     # [END index_manager]
 
     # Create Routing Model.
@@ -179,20 +180,20 @@ def main():
     # [END distance_constraint]
 
     # Define Transportation Requests.
-    # [START pickup_delivery]
+    # [START pickup_delivery_constraint]
     for request in data['pickups_deliveries']:
         pickup_index = manager.NodeToIndex(request[0])
         delivery_index = manager.NodeToIndex(request[1])
         routing.AddPickupAndDelivery(pickup_index, delivery_index)
         routing.solver().Add(
-            routing.VehicleVar(pickup_index) ==
-            routing.VehicleVar(delivery_index))
+            routing.VehicleVar(pickup_index) == routing.VehicleVar(
+                delivery_index))
         routing.solver().Add(
             distance_dimension.CumulVar(pickup_index) <=
             distance_dimension.CumulVar(delivery_index))
     routing.SetPickupAndDeliveryPolicyOfAllVehicles(
-        pywrapcp.RoutingModel.FIFO)
-    # [END pickup_delivery]
+        pywrapcp.RoutingModel.PICKUP_AND_DELIVERY_FIFO)
+    # [END pickup_delivery_constraint]
 
     # Setting first solution heuristic.
     # [START parameters]

@@ -12,8 +12,10 @@
 # limitations under the License.
 # [START program]
 """Simple Travelling Salesman Problem.
-   A description of the problem can be found here:
-   http://en.wikipedia.org/wiki/Travelling_salesman_problem."""
+
+A description of the problem can be found here:
+http://en.wikipedia.org/wiki/Travelling_salesman_problem.
+"""
 
 # [START import]
 from __future__ import print_function
@@ -99,8 +101,8 @@ def main():
 
     # Create the routing index manager.
     # [START index_manager]
-    manager = pywrapcp.RoutingIndexManager(
-        len(data['locations']), data['num_vehicles'], data['depot'])
+    manager = pywrapcp.RoutingIndexManager(len(data['locations']),
+                                           data['num_vehicles'], data['depot'])
     # [END index_manager]
 
     # Create Routing Model.
@@ -108,10 +110,14 @@ def main():
     routing = pywrapcp.RoutingModel(manager)
     # [END routing_model]
 
-    # Define cost of each arc.
-    # [START arc_cost]
+    # Create and register a transit callback.
+    # [START transit_callback]
     distance_callback = create_distance_callback(data, manager)
     transit_callback_index = routing.RegisterTransitCallback(distance_callback)
+    # [END transit_callback]
+
+    # Define cost of each arc.
+    # [START arc_cost]
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
     # [END arc_cost]
 

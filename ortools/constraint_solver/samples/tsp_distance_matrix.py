@@ -17,7 +17,6 @@
 from __future__ import print_function
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
-
 # [END import]
 
 
@@ -128,8 +127,8 @@ def main():
 
     # Create the routing index manager.
     # [START index_manager]
-    manager = pywrapcp.RoutingIndexManager(
-        len(data['distance_matrix']), data['num_vehicles'], data['depot'])
+    manager = pywrapcp.RoutingIndexManager(len(data['distance_matrix']),
+                                           data['num_vehicles'], data['depot'])
     # [END index_manager]
 
     # Create Routing Model.
@@ -138,16 +137,20 @@ def main():
 
     # [END routing_model]
 
-    # Define cost of each arc.
-    # [START arc_cost]
+    # Create and register a transit callback.
+    # [START transit_callback]
     def distance_callback(from_index, to_index):
-        """Returns the manhattan distance between the two nodes."""
+        """Returns the distance between the two nodes."""
         # Convert from routing variable Index to distance matrix NodeIndex.
         from_node = manager.IndexToNode(from_index)
         to_node = manager.IndexToNode(to_index)
         return data['distance_matrix'][from_node][to_node]
 
     transit_callback_index = routing.RegisterTransitCallback(distance_callback)
+    # [END transit_callback]
+
+    # Define cost of each arc.
+    # [START arc_cost]
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
     # [END arc_cost]
 

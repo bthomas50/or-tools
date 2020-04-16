@@ -17,7 +17,6 @@
 from __future__ import print_function
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
-
 # [END import]
 
 
@@ -45,23 +44,23 @@ def create_data_model():
         [7, 14, 9, 16, 14, 8, 5, 10, 6, 5, 4, 10, 8, 6, 2, 9, 0],
     ]
     data['time_windows'] = [
-        (0, 0),  # depot
-        (10, 15),  # 1
+        (0, 5),  # depot
+        (7, 12),  # 1
         (10, 15),  # 2
-        (5, 10),  # 3
-        (5, 10),  # 4
+        (5, 14),  # 3
+        (5, 13),  # 4
         (0, 5),  # 5
         (5, 10),  # 6
-        (0, 5),  # 7
+        (0, 10),  # 7
         (5, 10),  # 8
         (0, 5),  # 9
-        (10, 15),  # 10
+        (10, 16),  # 10
         (10, 15),  # 11
         (0, 5),  # 12
         (5, 10),  # 13
-        (5, 10),  # 14
+        (7, 12),  # 14
         (10, 15),  # 15
-        (5, 10),  # 16
+        (5, 15),  # 16
     ]
     data['num_vehicles'] = 4
     data['depot'] = 0
@@ -72,33 +71,26 @@ def create_data_model():
 # [START solution_printer]
 def print_solution(data, manager, routing, assignment):
     """Prints assignment on console."""
-    print('Objective: {}'.format(assignment.ObjectiveValue()))
     time_dimension = routing.GetDimensionOrDie('Time')
     total_time = 0
     for vehicle_id in range(data['num_vehicles']):
         index = routing.Start(vehicle_id)
         plan_output = 'Route for vehicle {}:\n'.format(vehicle_id)
-        route_time = 0
         while not routing.IsEnd(index):
             time_var = time_dimension.CumulVar(index)
-            slack_var = time_dimension.SlackVar(index)
-            plan_output += ' {0} Time({1},{2}) Slack({3},{4})-> '.format(
-                manager.IndexToNode(index),
-                assignment.Min(time_var),
-                assignment.Max(time_var),
-                assignment.Min(slack_var), assignment.Max(slack_var))
-            previous_index = index
+            plan_output += '{0} Time({1},{2}) -> '.format(
+                manager.IndexToNode(index), assignment.Min(time_var),
+                assignment.Max(time_var))
             index = assignment.Value(routing.NextVar(index))
-            route_time += routing.GetArcCostForVehicle(previous_index, index,
-                                                       vehicle_id)
         time_var = time_dimension.CumulVar(index)
-        plan_output += ' {0} Time({1},{2})\n'.format(
-            manager.IndexToNode(index),
-            assignment.Min(time_var), assignment.Max(time_var))
-        plan_output += 'Time of the route: {}min\n'.format(route_time)
+        plan_output += '{0} Time({1},{2})\n'.format(manager.IndexToNode(index),
+                                                    assignment.Min(time_var),
+                                                    assignment.Max(time_var))
+        plan_output += 'Time of the route: {}min\n'.format(
+            assignment.Min(time_var))
         print(plan_output)
-        total_time += route_time
-    print('Total Time of all routes: {}min'.format(total_time))
+        total_time += assignment.Min(time_var)
+    print('Total time of all routes: {}min'.format(total_time))
     # [END solution_printer]
 
 
@@ -111,8 +103,8 @@ def main():
 
     # Create the routing index manager.
     # [START index_manager]
-    manager = pywrapcp.RoutingIndexManager(
-        len(data['time_matrix']), data['num_vehicles'], data['depot'])
+    manager = pywrapcp.RoutingIndexManager(len(data['time_matrix']),
+                                           data['num_vehicles'], data['depot'])
     # [END index_manager]
 
     # Create Routing Model.
@@ -121,16 +113,20 @@ def main():
 
     # [END routing_model]
 
-    # Define cost of each arc.
-    # [START arc_cost]
+    # Create and register a transit callback.
+    # [START transit_callback]
     def time_callback(from_index, to_index):
-        """Returns the manhattan distance travel time between the two nodes."""
+        """Returns the travel time between the two nodes."""
         # Convert from routing variable Index to time matrix NodeIndex.
         from_node = manager.IndexToNode(from_index)
         to_node = manager.IndexToNode(to_index)
         return data['time_matrix'][from_node][to_node]
 
     transit_callback_index = routing.RegisterTransitCallback(time_callback)
+    # [END transit_callback]
+
+    # Define cost of each arc.
+    # [START arc_cost]
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
     # [END arc_cost]
 
@@ -142,26 +138,29 @@ def main():
         30,  # allow waiting time
         30,  # maximum time per vehicle
         False,  # Don't force start cumul to zero.
-        # This doesn't have any effect in this example,
-        # since the depot has a start window of (0, 0).
         time)
     time_dimension = routing.GetDimensionOrDie(time)
-    # Add time window constraints for each location except depot
-    # and 'copy' the slack var in the solution object (aka Assignment) to print it
+    # Add time window constraints for each location except depot.
     for location_idx, time_window in enumerate(data['time_windows']):
         if location_idx == 0:
             continue
         index = manager.NodeToIndex(location_idx)
         time_dimension.CumulVar(index).SetRange(time_window[0], time_window[1])
-        routing.AddToAssignment(time_dimension.SlackVar(index))
-    # Add time window constraints for each vehicle start node
-    # and 'copy' the slack var in the solution object (aka Assignment) to print it
+    # Add time window constraints for each vehicle start node.
     for vehicle_id in range(data['num_vehicles']):
         index = routing.Start(vehicle_id)
         time_dimension.CumulVar(index).SetRange(data['time_windows'][0][0],
                                                 data['time_windows'][0][1])
-        routing.AddToAssignment(time_dimension.SlackVar(index))
     # [END time_windows_constraint]
+
+    # Instantiate route start and end times to produce feasible times.
+    # [START depot_start_end_times]
+    for i in range(data['num_vehicles']):
+        routing.AddVariableMinimizedByFinalizer(
+            time_dimension.CumulVar(routing.Start(i)))
+        routing.AddVariableMinimizedByFinalizer(
+            time_dimension.CumulVar(routing.End(i)))
+    # [END depot_start_end_times]
 
     # Setting first solution heuristic.
     # [START parameters]

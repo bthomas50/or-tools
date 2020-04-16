@@ -12,10 +12,13 @@
 // limitations under the License.
 
 #include "ortools/sat/cp_model.h"
+
 #include "absl/strings/str_format.h"
 #include "ortools/base/map_util.h"
 #include "ortools/sat/cp_model.pb.h"
+#include "ortools/sat/cp_model_solver.h"
 #include "ortools/sat/cp_model_utils.h"
+#include "ortools/sat/sat_parameters.pb.h"
 
 namespace operations_research {
 namespace sat {
@@ -81,6 +84,10 @@ IntVar::IntVar(const BoolVar& var) {
   index_ = var.index_;
 }
 
+LinearExpr IntVar::AddConstant(int64 value) const {
+  return LinearExpr(*this).AddConstant(value);
+}
+
 std::string IntVar::DebugString() const {
   if (index_ < 0) {
     return absl::StrFormat("Not(%s)",
@@ -138,6 +145,12 @@ LinearExpr LinearExpr::ScalProd(absl::Span<const IntVar> vars,
   for (int i = 0; i < vars.size(); ++i) {
     result.AddTerm(vars[i], coeffs[i]);
   }
+  return result;
+}
+
+LinearExpr LinearExpr::Term(IntVar var, int64 coefficient) {
+  LinearExpr result;
+  result.AddTerm(var, coefficient);
   return result;
 }
 
@@ -205,6 +218,12 @@ void CircuitConstraint::AddArc(int tail, int head, BoolVar literal) {
   proto_->mutable_circuit()->add_literals(literal.index_);
 }
 
+void MultipleCircuitConstraint::AddArc(int tail, int head, BoolVar literal) {
+  proto_->mutable_routes()->add_tails(tail);
+  proto_->mutable_routes()->add_heads(head);
+  proto_->mutable_routes()->add_literals(literal.index_);
+}
+
 void TableConstraint::AddTuple(absl::Span<const int64> tuple) {
   CHECK_EQ(tuple.size(), proto_->table().vars_size());
   for (const int64 t : tuple) {
@@ -233,9 +252,9 @@ void ReservoirConstraint::AddOptionalEvent(IntVar time, int64 demand,
 
 void AutomatonConstraint::AddTransition(int tail, int head,
                                         int64 transition_label) {
-  proto_->mutable_automata()->add_transition_tail(tail);
-  proto_->mutable_automata()->add_transition_head(head);
-  proto_->mutable_automata()->add_transition_label(transition_label);
+  proto_->mutable_automaton()->add_transition_tail(tail);
+  proto_->mutable_automaton()->add_transition_head(head);
+  proto_->mutable_automaton()->add_transition_label(transition_label);
 }
 
 void NoOverlap2DConstraint::AddRectangle(IntervalVar x_coordinate,
@@ -538,6 +557,10 @@ CircuitConstraint CpModelBuilder::AddCircuitConstraint() {
   return CircuitConstraint(cp_model_.add_constraints());
 }
 
+MultipleCircuitConstraint CpModelBuilder::AddMultipleCircuitConstraint() {
+  return MultipleCircuitConstraint(cp_model_.add_constraints());
+}
+
 TableConstraint CpModelBuilder::AddAllowedAssignments(
     absl::Span<const IntVar> vars) {
   ConstraintProto* const proto = cp_model_.add_constraints();
@@ -584,11 +607,11 @@ AutomatonConstraint CpModelBuilder::AddAutomaton(
     absl::Span<const int> final_states) {
   ConstraintProto* const proto = cp_model_.add_constraints();
   for (const IntVar& var : transition_variables) {
-    proto->mutable_automata()->add_vars(GetOrCreateIntegerIndex(var.index_));
+    proto->mutable_automaton()->add_vars(GetOrCreateIntegerIndex(var.index_));
   }
-  proto->mutable_automata()->set_starting_state(starting_state);
+  proto->mutable_automaton()->set_starting_state(starting_state);
   for (const int final_state : final_states) {
-    proto->mutable_automata()->add_final_states(final_state);
+    proto->mutable_automaton()->add_final_states(final_state);
   }
   return AutomatonConstraint(proto);
 }
@@ -603,12 +626,45 @@ Constraint CpModelBuilder::AddMinEquality(IntVar target,
   return Constraint(proto);
 }
 
+void CpModelBuilder::LinearExprToProto(const LinearExpr& expr,
+                                       LinearExpressionProto* expr_proto) {
+  for (const IntVar var : expr.variables()) {
+    expr_proto->add_vars(GetOrCreateIntegerIndex(var.index_));
+  }
+  for (const int64 coeff : expr.coefficients()) {
+    expr_proto->add_coeffs(coeff);
+  }
+  expr_proto->set_offset(expr.constant());
+}
+
+Constraint CpModelBuilder::AddLinMinEquality(
+    const LinearExpr& target, absl::Span<const LinearExpr> exprs) {
+  ConstraintProto* const proto = cp_model_.add_constraints();
+  LinearExprToProto(target, proto->mutable_lin_min()->mutable_target());
+  for (const LinearExpr& expr : exprs) {
+    LinearExpressionProto* expr_proto = proto->mutable_lin_min()->add_exprs();
+    LinearExprToProto(expr, expr_proto);
+  }
+  return Constraint(proto);
+}
+
 Constraint CpModelBuilder::AddMaxEquality(IntVar target,
                                           absl::Span<const IntVar> vars) {
   ConstraintProto* const proto = cp_model_.add_constraints();
   proto->mutable_int_max()->set_target(GetOrCreateIntegerIndex(target.index_));
   for (const IntVar& var : vars) {
     proto->mutable_int_max()->add_vars(GetOrCreateIntegerIndex(var.index_));
+  }
+  return Constraint(proto);
+}
+
+Constraint CpModelBuilder::AddLinMaxEquality(
+    const LinearExpr& target, absl::Span<const LinearExpr> exprs) {
+  ConstraintProto* const proto = cp_model_.add_constraints();
+  LinearExprToProto(target, proto->mutable_lin_max()->mutable_target());
+  for (const LinearExpr& expr : exprs) {
+    LinearExpressionProto* expr_proto = proto->mutable_lin_max()->add_exprs();
+    LinearExprToProto(expr, expr_proto);
   }
   return Constraint(proto);
 }
@@ -724,13 +780,10 @@ void CpModelBuilder::AddDecisionStrategy(
   proto->set_domain_reduction_strategy(domain_strategy);
 }
 
-CpSolverResponse Solve(CpModelBuilder cp_model) {
-  Model model;
-  return SolveCpModel(cp_model.Proto(), &model);
-}
-
-CpSolverResponse SolveWithModel(CpModelBuilder cp_model, Model* model) {
-  return SolveCpModel(cp_model.Proto(), model);
+void CpModelBuilder::AddHint(IntVar var, int64 value) {
+  cp_model_.mutable_solution_hint()->add_vars(
+      GetOrCreateIntegerIndex(var.index_));
+  cp_model_.mutable_solution_hint()->add_values(value);
 }
 
 int64 SolutionIntegerValue(const CpSolverResponse& r, const LinearExpr& expr) {

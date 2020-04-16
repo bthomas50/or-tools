@@ -18,8 +18,10 @@
 #include <vector>
 
 #include "ortools/base/int_type.h"
+#include "ortools/sat/implied_bounds.h"
 #include "ortools/sat/integer.h"
 #include "ortools/sat/linear_constraint.h"
+#include "ortools/sat/linear_constraint_manager.h"
 #include "ortools/sat/model.h"
 #include "ortools/util/time_limit.h"
 
@@ -33,13 +35,48 @@ namespace sat {
 // CutGenerator should:
 // - Only look at the lp_values positions that corresponds to its 'vars' or
 //   their negation.
-// - Only return cuts in term of the same variables or their negation.
+// - Only add cuts in term of the same variables or their negation.
 struct CutGenerator {
-  std::string type;
   std::vector<IntegerVariable> vars;
-  std::function<std::vector<LinearConstraint>(
-      const gtl::ITIVector<IntegerVariable, double>& lp_values)>
+  std::function<void(const gtl::ITIVector<IntegerVariable, double>& lp_values,
+                     LinearConstraintManager* manager)>
       generate_cuts;
+};
+
+// Given an upper-bounded linear relation (sum terms <= ub), this algorithm
+// inspects the integer variable appearing in the sum and try to replace each of
+// them by a tight lower bound (>= coeff * binary + lb) using the implied bound
+// repository. By tight, we mean that it will take the same value under the
+// current LP solution.
+//
+// We use a class to reuse memory of the tmp terms.
+class ImpliedBoundsProcessor {
+ public:
+  // We will only replace IntegerVariable appearing in lp_vars_.
+  ImpliedBoundsProcessor(absl::Span<const IntegerVariable> lp_vars_,
+                         IntegerTrail* integer_trail,
+                         ImpliedBounds* implied_bounds)
+      : lp_vars_(lp_vars_.begin(), lp_vars_.end()),
+        integer_trail_(integer_trail),
+        implied_bounds_(implied_bounds) {}
+
+  // Processes and updates the given cut.
+  void ProcessUpperBoundedConstraint(
+      const gtl::ITIVector<IntegerVariable, double>& lp_values,
+      LinearConstraint* cut) const;
+
+  // Add a new variable that could be used in the new cuts.
+  void AddLpVariable(IntegerVariable var) { lp_vars_.insert(var); }
+
+ private:
+  absl::flat_hash_set<IntegerVariable> lp_vars_;
+
+  // Data from the constructor.
+  IntegerTrail* integer_trail_;
+  ImpliedBounds* implied_bounds_;
+
+  // Temporary memory used by ProcessUpperBoundedConstraint().
+  mutable std::vector<std::pair<IntegerVariable, IntegerValue>> tmp_terms_;
 };
 
 // Visible for testing. Returns a function f on integers such that:
@@ -59,7 +96,7 @@ struct CutGenerator {
 //
 // Algorithm:
 // - We first scale by a factor t so that rhs_remainder >= divisor / 2.
-// - Then, if use_letchford_lodi_version is true, we use the function described
+// - Then, if max_scaling == 2, we use the function described
 //   in "Strenghtening Chvatal-Gomory cuts and Gomory fractional cuts", Adam N.
 //   Letchfrod, Andrea Lodi.
 // - Otherwise, we use a generalization of this which is a discretized version
@@ -72,8 +109,8 @@ struct CutGenerator {
 // it could be nice to try to generate a cut using different values of
 // max_scaling.
 std::function<IntegerValue(IntegerValue)> GetSuperAdditiveRoundingFunction(
-    bool use_letchford_lodi_version, IntegerValue rhs_remainder,
-    IntegerValue divisor, IntegerValue max_scaling);
+    IntegerValue rhs_remainder, IntegerValue divisor, IntegerValue max_t,
+    IntegerValue max_scaling);
 
 // Given an upper bounded linear constraint, this function tries to transform it
 // to a valid cut that violate the given LP solution using integer rounding.
@@ -97,7 +134,7 @@ std::function<IntegerValue(IntegerValue)> GetSuperAdditiveRoundingFunction(
 //   values. This could be relaxed, but for now it should always be the case, so
 //   we log a message and abort if not, to ease debugging.
 // - The IntegerVariable of the cuts are not used here. We assumes that the
-//   first three vectors are in one to one correspondance with the initial order
+//   first three vectors are in one to one correspondence with the initial order
 //   of the variable in the cut.
 //
 // TODO(user): There is a bunch of heuristic involved here, and we could spend
@@ -105,12 +142,12 @@ std::function<IntegerValue(IntegerValue)> GetSuperAdditiveRoundingFunction(
 // the best looking cut (or more than one). This is not on the critical code
 // path, so we can spend more effort in finding good cuts.
 struct RoundingOptions {
-  bool use_mir = false;
   IntegerValue max_scaling = IntegerValue(60);
 };
-void IntegerRoundingCut(RoundingOptions options, std::vector<double> lp_values,
-                        std::vector<IntegerValue> lower_bounds,
-                        std::vector<IntegerValue> upper_bounds,
+void IntegerRoundingCut(RoundingOptions options,
+                        const std::vector<double>& lp_values,
+                        const std::vector<IntegerValue>& lower_bounds,
+                        const std::vector<IntegerValue>& upper_bounds,
                         LinearConstraint* cut);
 
 // If a variable is away from its upper bound by more than value 1.0, then it
@@ -183,7 +220,8 @@ bool CanFormValidKnapsackCover(
 // For constraint with finite lower bound, this method also adds the negation of
 // the given constraint after converting it to canonical knapsack form.
 void ConvertToKnapsackForm(const LinearConstraint& constraint,
-                           std::vector<LinearConstraint>* knapsack_constraints);
+                           std::vector<LinearConstraint>* knapsack_constraints,
+                           IntegerTrail* integer_trail);
 
 // Returns true if the cut is lifted. Lifting procedure is described below.
 //
@@ -253,6 +291,26 @@ bool LiftKnapsackCut(
 // TODO(user): Implement cut lifting.
 CutGenerator CreateKnapsackCoverCutGenerator(
     const std::vector<LinearConstraint>& base_constraints,
+    const std::vector<IntegerVariable>& vars, Model* model);
+
+// A cut generator for z = x * y (x and y >= 0).
+CutGenerator CreatePositiveMultiplicationCutGenerator(IntegerVariable z,
+                                                      IntegerVariable x,
+                                                      IntegerVariable y,
+                                                      Model* model);
+
+// A cut generator for y = x ^ 2 (x >= 0).
+// It will dynamically add a linear inequality to push y closer to the parabola.
+CutGenerator CreateSquareCutGenerator(IntegerVariable y, IntegerVariable x,
+                                      Model* model);
+
+// A cut generator for all_diff(xi). Let the united domain of all xi be D. Sum
+// of any k-sized subset of xi need to be greater or equal to the sum of
+// smallest k values in D and lesser or equal to the sum of largest k values in
+// D. The cut generator first sorts the variables based on LP values and adds
+// cuts of the form described above if they are violated by lp solution. Note
+// that all the fixed variables are ignored while generating cuts.
+CutGenerator CreateAllDifferentCutGenerator(
     const std::vector<IntegerVariable>& vars, Model* model);
 
 }  // namespace sat

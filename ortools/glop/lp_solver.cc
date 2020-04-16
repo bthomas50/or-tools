@@ -17,13 +17,12 @@
 #include <stack>
 #include <vector>
 
-#include "ortools/base/commandlineflags.h"
-#include "ortools/base/integral_types.h"
-#include "ortools/base/timer.h"
-
 #include "absl/memory/memory.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_format.h"
+#include "ortools/base/commandlineflags.h"
+#include "ortools/base/integral_types.h"
+#include "ortools/base/timer.h"
 #include "ortools/glop/preprocessor.h"
 #include "ortools/glop/status.h"
 #include "ortools/lp_data/lp_types.h"
@@ -114,6 +113,8 @@ void LPSolver::SetParameters(const GlopParameters& parameters) {
 }
 
 const GlopParameters& LPSolver::GetParameters() const { return parameters_; }
+
+GlopParameters* LPSolver::GetMutableParameters() { return &parameters_; }
 
 ProblemStatus LPSolver::Solve(const LinearProgram& lp) {
   std::unique_ptr<TimeLimit> time_limit =
@@ -599,7 +600,16 @@ bool LPSolver::IsProblemSolutionConsistent(
         ++num_basic_variables;
         break;
       case VariableStatus::FIXED_VALUE:
-        if (lb != ub || value != lb) {
+        // TODO(user): Because of scaling, it is possible that a FIXED_VALUE
+        // status (only reserved for the exact lb == ub case) is now set for a
+        // variable where (ub == lb + epsilon). So we do not check here that the
+        // two bounds are exactly equal. The best is probably to remove the
+        // FIXED status from the API completely and report one of AT_LOWER_BOUND
+        // or AT_UPPER_BOUND instead. This also allows to indicate if at
+        // optimality, the objective is limited because of this variable lower
+        // bound or its upper bound. Note that there are other TODOs in the
+        // codebase about removing this FIXED_VALUE status.
+        if (value != ub && value != lb) {
           LogVariableStatusError(col, value, status, lb, ub);
           return false;
         }

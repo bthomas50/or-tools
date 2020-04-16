@@ -94,9 +94,11 @@ def create_data_model():
             536, 194, 798, 0
         ],
     ]
+    # [START demands_capacities]
     data['demands'] = [0, 1, 1, 2, 4, 2, 4, 8, 8, 1, 2, 1, 2, 4, 4, 8, 8]
-    data['num_vehicles'] = 4
     data['vehicle_capacities'] = [15, 15, 15, 15]
+    # [END demands_capacities]
+    data['num_vehicles'] = 4
     data['depot'] = 0
     return data
     # [END data_model]
@@ -105,7 +107,6 @@ def create_data_model():
 # [START solution_printer]
 def print_solution(data, manager, routing, assignment):
     """Prints assignment on console."""
-    print('Objective: {}'.format(assignment.ObjectiveValue()))
     total_distance = 0
     total_load = 0
     for vehicle_id in range(data['num_vehicles']):
@@ -121,15 +122,15 @@ def print_solution(data, manager, routing, assignment):
             index = assignment.Value(routing.NextVar(index))
             route_distance += routing.GetArcCostForVehicle(
                 previous_index, index, vehicle_id)
-        plan_output += ' {0} Load({1})\n'.format(
-            manager.IndexToNode(index), route_load)
+        plan_output += ' {0} Load({1})\n'.format(manager.IndexToNode(index),
+                                                 route_load)
         plan_output += 'Distance of the route: {}m\n'.format(route_distance)
         plan_output += 'Load of the route: {}\n'.format(route_load)
         print(plan_output)
         total_distance += route_distance
         total_load += route_load
-    print('Total Distance of all routes: {}m'.format(total_distance))
-    print('Total Load of all routes: {}'.format(total_load))
+    print('Total distance of all routes: {}m'.format(total_distance))
+    print('Total load of all routes: {}'.format(total_load))
     # [END solution_printer]
 
 
@@ -142,8 +143,8 @@ def main():
 
     # Create the routing index manager.
     # [START index_manager]
-    manager = pywrapcp.RoutingIndexManager(
-        len(data['distance_matrix']), data['num_vehicles'], data['depot'])
+    manager = pywrapcp.RoutingIndexManager(len(data['distance_matrix']),
+                                           data['num_vehicles'], data['depot'])
     # [END index_manager]
 
     # Create Routing Model.
@@ -152,16 +153,20 @@ def main():
 
     # [END routing_model]
 
-    # Define cost of each arc.
-    # [START arc_cost]
+    # Create and register a transit callback.
+    # [START transit_callback]
     def distance_callback(from_index, to_index):
-        """Returns the manhattan distance between the two nodes."""
+        """Returns the distance between the two nodes."""
         # Convert from routing variable Index to distance matrix NodeIndex.
         from_node = manager.IndexToNode(from_index)
         to_node = manager.IndexToNode(to_index)
         return data['distance_matrix'][from_node][to_node]
 
     transit_callback_index = routing.RegisterTransitCallback(distance_callback)
+    # [END transit_callback]
+
+    # Define cost of each arc.
+    # [START arc_cost]
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
 
     # [END arc_cost]

@@ -68,13 +68,15 @@ endif
 DOTNET_ORTOOLS_SNK := $(BIN_DIR)/or-tools.snk
 DOTNET_ORTOOLS_SNK_PATH := $(subst /,$S,$(DOTNET_ORTOOLS_SNK))
 OR_TOOLS_ASSEMBLY_NAME := Google.OrTools
-OR_TOOLS_TESTS_ASSEMBLY_NAME := Google.OrTools.Tests
-OR_TOOLS_NATIVE_ASSEMBLY_NAME := $(OR_TOOLS_ASSEMBLY_NAME).runtime.$(RUNTIME_IDENTIFIER)
+OR_TOOLS_NATIVE_PROJECT_NAME := $(OR_TOOLS_ASSEMBLY_NAME).runtime.$(RUNTIME_IDENTIFIER)
+OR_TOOLS_NATIVE_ASSEMBLY_NAME := google-ortools-native
 OR_TOOLS_FSHARP_ASSEMBLY_NAME := $(OR_TOOLS_ASSEMBLY_NAME).FSharp
 OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME := $(OR_TOOLS_ASSEMBLY_NAME).FSharp.Tests
 DOTNET_ORTOOLS_NUPKG := $(PACKAGE_DIR)/$(OR_TOOLS_ASSEMBLY_NAME).$(OR_TOOLS_VERSION).nupkg
-DOTNET_ORTOOLS_NATIVE_NUPKG := $(PACKAGE_DIR)/$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).$(OR_TOOLS_VERSION).nupkg
+DOTNET_ORTOOLS_NATIVE_NUPKG := $(PACKAGE_DIR)/$(OR_TOOLS_NATIVE_PROJECT_NAME).$(OR_TOOLS_VERSION).nupkg
 DOTNET_ORTOOLS_FSHARP_NUPKG := $(PACKAGE_DIR)/$(OR_TOOLS_FSHARP_ASSEMBLY_NAME).$(OR_TOOLS_VERSION).nupkg
+NUGET_PACK_ARGS := -c Release --include-symbols
+DOTNET_BUILD_ARGS := -c Release /p:Platform=x64
 
 ######################
 ##  RUNTIME CSHARP  ##
@@ -82,7 +84,9 @@ DOTNET_ORTOOLS_FSHARP_NUPKG := $(PACKAGE_DIR)/$(OR_TOOLS_FSHARP_ASSEMBLY_NAME).$
 .PHONY: dotnet_runtime # Build C# runtime OR-Tools
 dotnet_runtime: $(DOTNET_ORTOOLS_NATIVE_NUPKG)
 
-# Protobufs generated code
+###################################################################
+# Protobuf: generate C# cs files from proto specification files. ##
+###################################################################
 $(GEN_DIR)/ortools/constraint_solver/SearchLimit.pb.cs: \
  $(SRC_DIR)/ortools/constraint_solver/search_limit.proto \
  | $(GEN_DIR)/ortools/constraint_solver
@@ -139,7 +143,9 @@ $(GEN_DIR)/ortools/util/OptionalBoolean.pb.cs: \
  --csharp_opt=file_extension=.pb.cs \
  $(SRC_DIR)$Sortools$Sutil$Soptional_boolean.proto
 
-# Auto-generated rid dependent source code
+#############################################################################################
+# Swig: Generate C# wrapper cs files from swig specification files and C wrapper .c files. ##
+#############################################################################################
 $(GEN_DIR)/ortools/linear_solver/linear_solver_csharp_wrap.cc: \
  $(SRC_DIR)/ortools/linear_solver/csharp/linear_solver.i \
  $(SRC_DIR)/ortools/base/base.i \
@@ -151,7 +157,7 @@ $(GEN_DIR)/ortools/linear_solver/linear_solver_csharp_wrap.cc: \
  -o $(GEN_PATH)$Sortools$Slinear_solver$Slinear_solver_csharp_wrap.cc \
  -module operations_research_linear_solver \
  -namespace $(OR_TOOLS_ASSEMBLY_NAME).LinearSolver \
- -dllimport "$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).$(SWIG_DOTNET_LIB_SUFFIX)" \
+ -dllimport "$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)" \
  -outdir $(GEN_PATH)$Sortools$Slinear_solver \
  $(SRC_DIR)$Sortools$Slinear_solver$Scsharp$Slinear_solver.i
 
@@ -167,14 +173,13 @@ $(GEN_DIR)/ortools/constraint_solver/constraint_solver_csharp_wrap.cc: \
  $(SRC_DIR)/ortools/constraint_solver/csharp/constraint_solver.i \
  $(SRC_DIR)/ortools/base/base.i \
  $(SRC_DIR)/ortools/util/csharp/proto.i \
- $(SRC_DIR)/ortools/util/csharp/functions.i \
  $(CP_DEPS) \
  | $(GEN_DIR)/ortools/constraint_solver
 	$(SWIG_BINARY) $(SWIG_INC) -I$(INC_DIR) -c++ -csharp \
  -o $(GEN_PATH)$Sortools$Sconstraint_solver$Sconstraint_solver_csharp_wrap.cc \
  -module operations_research_constraint_solver \
  -namespace $(OR_TOOLS_ASSEMBLY_NAME).ConstraintSolver \
- -dllimport "$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).$(SWIG_DOTNET_LIB_SUFFIX)" \
+ -dllimport "$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)" \
  -outdir $(GEN_PATH)$Sortools$Sconstraint_solver \
  $(SRC_DIR)$Sortools$Sconstraint_solver$Scsharp$Srouting.i
 	$(SED) -i -e 's/CSharp_new_Solver/CSharp_new_CpSolver/g' \
@@ -218,7 +223,7 @@ $(GEN_DIR)/ortools/algorithms/knapsack_solver_csharp_wrap.cc: \
  -o $(GEN_PATH)$Sortools$Salgorithms$Sknapsack_solver_csharp_wrap.cc \
  -module operations_research_algorithms \
  -namespace $(OR_TOOLS_ASSEMBLY_NAME).Algorithms \
- -dllimport "$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).$(SWIG_DOTNET_LIB_SUFFIX)" \
+ -dllimport "$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)" \
  -outdir $(GEN_PATH)$Sortools$Salgorithms \
  $(SRC_DIR)$Sortools$Salgorithms$Scsharp$Sknapsack_solver.i
 	$(SED) -i -e 's/< long long >/< int64_t >/g' \
@@ -242,7 +247,7 @@ $(GEN_DIR)/ortools/graph/graph_csharp_wrap.cc: \
  -o $(GEN_PATH)$Sortools$Sgraph$Sgraph_csharp_wrap.cc \
  -module operations_research_graph \
  -namespace $(OR_TOOLS_ASSEMBLY_NAME).Graph \
- -dllimport "$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).$(SWIG_DOTNET_LIB_SUFFIX)" \
+ -dllimport "$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)" \
  -outdir $(GEN_PATH)$Sortools$Sgraph \
  $(SRC_DIR)$Sortools$Sgraph$Scsharp$Sgraph.i
 
@@ -257,14 +262,13 @@ $(GEN_DIR)/ortools/sat/sat_csharp_wrap.cc: \
  $(SRC_DIR)/ortools/base/base.i \
  $(SRC_DIR)/ortools/sat/csharp/sat.i \
  $(SRC_DIR)/ortools/sat/swig_helper.h \
- $(SRC_DIR)/ortools/util/csharp/proto.i \
  $(SAT_DEPS) \
  | $(GEN_DIR)/ortools/sat $(GEN_DIR)/ortools/sat
 	$(SWIG_BINARY) $(SWIG_INC) -I$(INC_DIR) -c++ -csharp \
  -o $(GEN_PATH)$Sortools$Ssat$Ssat_csharp_wrap.cc \
  -module operations_research_sat \
  -namespace $(OR_TOOLS_ASSEMBLY_NAME).Sat \
- -dllimport "$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).$(SWIG_DOTNET_LIB_SUFFIX)" \
+ -dllimport "$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)" \
  -outdir $(GEN_PATH)$Sortools$Ssat \
  $(SRC_DIR)$Sortools$Ssat$Scsharp$Ssat.i
 
@@ -275,6 +279,32 @@ $(OBJ_DIR)/swig/sat_csharp_wrap.$O: \
  -c $(GEN_PATH)$Sortools$Ssat$Ssat_csharp_wrap.cc \
  $(OBJ_OUT)$(OBJ_DIR)$Sswig$Ssat_csharp_wrap.$O
 
+$(GEN_DIR)/ortools/util/sorted_interval_list_csharp_wrap.cc: \
+ $(SRC_DIR)/ortools/base/base.i \
+ $(SRC_DIR)/ortools/util/csharp/sorted_interval_list.i \
+ $(SRC_DIR)/ortools/util/csharp/proto.i \
+ $(UTIL_DEPS) \
+ |  $(GEN_DIR)/ortools/util
+	$(SWIG_BINARY) $(SWIG_INC) -I$(INC_DIR) -c++ -csharp \
+ -o $(GEN_PATH)$Sortools$Sutil$Ssorted_interval_list_csharp_wrap.cc \
+ -module operations_research_util \
+ -namespace $(OR_TOOLS_ASSEMBLY_NAME).Util \
+ -dllimport "$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)" \
+ -outdir $(GEN_PATH)$Sortools$Sutil \
+ $(SRC_DIR)$Sortools$Sutil$Scsharp$Ssorted_interval_list.i
+	$(SED) -i -e 's/< long long >/< int64 >/g' \
+ $(GEN_PATH)$Sortools$Sutil$Ssorted_interval_list_csharp_wrap.cc
+
+$(OBJ_DIR)/swig/sorted_interval_list_csharp_wrap.$O: \
+ $(GEN_DIR)/ortools/util/sorted_interval_list_csharp_wrap.cc \
+ | $(OBJ_DIR)/swig
+	$(CCC) $(CFLAGS) \
+ -c $(GEN_PATH)$Sortools$Sutil$Ssorted_interval_list_csharp_wrap.cc \
+ $(OBJ_OUT)$(OBJ_DIR)$Sswig$Ssorted_interval_list_csharp_wrap.$O
+
+############
+# Signing ##
+############
 ifneq ($(DOTNET_SNK),)
 $(DOTNET_ORTOOLS_SNK): | $(BIN_DIR)
 	$(COPY) $(DOTNET_SNK) $(DOTNET_ORTOOLS_SNK_PATH)
@@ -283,6 +313,9 @@ $(DOTNET_ORTOOLS_SNK): ortools/dotnet/CreateSigningKey/CreateSigningKey.csproj |
 	"$(DOTNET_BIN)" run --project ortools$Sdotnet$SCreateSigningKey$SCreateSigningKey.csproj $S$(DOTNET_ORTOOLS_SNK_PATH)
 endif
 
+##########################################
+# Swig: Generate native wrapper binary. ##
+##########################################
 $(LIB_DIR)/$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).$(SWIG_DOTNET_LIB_SUFFIX): \
  $(OR_TOOLS_LIBS) \
  $(OBJ_DIR)/swig/linear_solver_csharp_wrap.$O \
@@ -290,6 +323,7 @@ $(LIB_DIR)/$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).$(SWIG_DOTNET_LIB_SUFFIX): \
  $(OBJ_DIR)/swig/constraint_solver_csharp_wrap.$O \
  $(OBJ_DIR)/swig/knapsack_solver_csharp_wrap.$O \
  $(OBJ_DIR)/swig/graph_csharp_wrap.$O \
+ $(OBJ_DIR)/swig/sorted_interval_list_csharp_wrap.$O \
  | $(LIB_DIR)
 	$(DYNAMIC_LD) \
  $(LD_OUT)$(LIB_DIR)$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).$(SWIG_DOTNET_LIB_SUFFIX) \
@@ -298,19 +332,19 @@ $(LIB_DIR)/$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).$(SWIG_DOTNET_LIB_SUFFIX): \
  $(OBJ_DIR)$Sswig$Sconstraint_solver_csharp_wrap.$O \
  $(OBJ_DIR)$Sswig$Sknapsack_solver_csharp_wrap.$O \
  $(OBJ_DIR)$Sswig$Sgraph_csharp_wrap.$O \
+ $(OBJ_DIR)/swig/sorted_interval_list_csharp_wrap.$O \
  $(OR_TOOLS_LNK) \
  $(OR_TOOLS_LDFLAGS)
 
-$(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)/$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).csproj: \
- $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)/$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).csproj.in
+$(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_NATIVE_PROJECT_NAME)/$(OR_TOOLS_NATIVE_PROJECT_NAME).csproj: \
+ $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_NATIVE_PROJECT_NAME)/$(OR_TOOLS_NATIVE_PROJECT_NAME).csproj.in
 	$(SED) -e "s/@PROJECT_VERSION@/$(OR_TOOLS_VERSION)/" \
- ortools$Sdotnet$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).csproj.in \
- > ortools$Sdotnet$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).csproj
+ ortools$Sdotnet$S$(OR_TOOLS_NATIVE_PROJECT_NAME)$S$(OR_TOOLS_NATIVE_PROJECT_NAME).csproj.in \
+ > ortools$Sdotnet$S$(OR_TOOLS_NATIVE_PROJECT_NAME)$S$(OR_TOOLS_NATIVE_PROJECT_NAME).csproj
 
 $(DOTNET_ORTOOLS_NATIVE_NUPKG): \
  $(LIB_DIR)/$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).$(SWIG_DOTNET_LIB_SUFFIX) \
- $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)/$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).csproj \
- $(SRC_DIR)/ortools/algorithms/csharp/IntArrayHelper.cs \
+ $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_NATIVE_PROJECT_NAME)/$(OR_TOOLS_NATIVE_PROJECT_NAME).csproj \
  $(SRC_DIR)/ortools/constraint_solver/csharp/IntVarArrayHelper.cs \
  $(SRC_DIR)/ortools/constraint_solver/csharp/IntervalVarArrayHelper.cs \
  $(SRC_DIR)/ortools/constraint_solver/csharp/IntArrayHelper.cs \
@@ -337,8 +371,8 @@ $(DOTNET_ORTOOLS_NATIVE_NUPKG): \
  $(GEN_DIR)/ortools/sat/CpModel.pb.cs \
  $(GEN_DIR)/ortools/util/OptionalBoolean.pb.cs \
  | $(DOTNET_ORTOOLS_SNK) $(PACKAGE_DIR)
-	"$(DOTNET_BIN)" build ortools$Sdotnet$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).csproj
-	"$(DOTNET_BIN)" pack ortools$Sdotnet$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).csproj
+	"$(DOTNET_BIN)" build $(DOTNET_BUILD_ARGS) ortools$Sdotnet$S$(OR_TOOLS_NATIVE_PROJECT_NAME)$S$(OR_TOOLS_NATIVE_PROJECT_NAME).csproj
+	"$(DOTNET_BIN)" pack $(NUGET_PACK_ARGS) ortools$Sdotnet$S$(OR_TOOLS_NATIVE_PROJECT_NAME)$S$(OR_TOOLS_NATIVE_PROJECT_NAME).csproj
 
 ##############
 ##  CSHARP  ##
@@ -346,37 +380,20 @@ $(DOTNET_ORTOOLS_NATIVE_NUPKG): \
 .PHONY: dotnet_csharp # Build C# OR-Tools
 dotnet_csharp: $(DOTNET_ORTOOLS_NUPKG)
 
+#  create csproj for managed project
 $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_ASSEMBLY_NAME)/$(OR_TOOLS_ASSEMBLY_NAME).csproj: \
  $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_ASSEMBLY_NAME)/$(OR_TOOLS_ASSEMBLY_NAME).csproj.in
 	$(SED) -e "s/@PROJECT_VERSION@/$(OR_TOOLS_VERSION)/" \
  ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)$S$(OR_TOOLS_ASSEMBLY_NAME).csproj.in \
  > ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)$S$(OR_TOOLS_ASSEMBLY_NAME).csproj
 
-$(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_ASSEMBLY_NAME)/runtime.json: \
- $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_ASSEMBLY_NAME)/runtime.json.in
-	$(SED) -e "s/@PROJECT_VERSION@/$(OR_TOOLS_VERSION)/" \
- ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)$Sruntime.json.in \
- > ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)$Sruntime.json
-
+# Pack managed project nuget
 $(DOTNET_ORTOOLS_NUPKG): \
  $(DOTNET_ORTOOLS_NATIVE_NUPKG) \
  $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_ASSEMBLY_NAME)/$(OR_TOOLS_ASSEMBLY_NAME).csproj \
- $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_ASSEMBLY_NAME)/runtime.json \
  | $(DOTNET_ORTOOLS_SNK) $(PACKAGE_DIR)
-	"$(DOTNET_BIN)" build ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)
-	"$(DOTNET_BIN)" pack ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)
-
-ortools/dotnet/$(OR_TOOLS_TESTS_ASSEMBLY_NAME)/$(OR_TOOLS_TESTS_ASSEMBLY_NAME).csproj: \
- $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_TESTS_ASSEMBLY_NAME)/$(OR_TOOLS_TESTS_ASSEMBLY_NAME).csproj.in
-	$(SED) -e "s/@PROJECT_VERSION@/$(OR_TOOLS_VERSION)/" \
- ortools$Sdotnet$S$(OR_TOOLS_TESTS_ASSEMBLY_NAME)$S$(OR_TOOLS_TESTS_ASSEMBLY_NAME).csproj.in \
- > ortools$Sdotnet$S$(OR_TOOLS_TESTS_ASSEMBLY_NAME)$S$(OR_TOOLS_TESTS_ASSEMBLY_NAME).csproj
-
-.PHONY: test_dotnet_csharp # Run C# OrTools Tests
-test_dotnet_csharp: $(DOTNET_ORTOOLS_NUPKG) \
- ortools/dotnet/$(OR_TOOLS_TESTS_ASSEMBLY_NAME)/$(OR_TOOLS_TESTS_ASSEMBLY_NAME).csproj
-	"$(DOTNET_BIN)" build ortools$Sdotnet$S$(OR_TOOLS_TESTS_ASSEMBLY_NAME)
-	"$(DOTNET_BIN)" test ortools$Sdotnet$S$(OR_TOOLS_TESTS_ASSEMBLY_NAME)
+	"$(DOTNET_BIN)" build $(DOTNET_BUILD_ARGS) ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)
+	"$(DOTNET_BIN)" pack $(NUGET_PACK_ARGS) ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)
 
 ##############
 ##  FSHARP  ##
@@ -384,19 +401,22 @@ test_dotnet_csharp: $(DOTNET_ORTOOLS_NUPKG) \
 .PHONY: dotnet_fsharp # Build F# OR-Tools
 dotnet_fsharp: $(DOTNET_ORTOOLS_FSHARP_NUPKG)
 
+# create fsproj
 $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)/$(OR_TOOLS_FSHARP_ASSEMBLY_NAME).fsproj: \
  $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)/$(OR_TOOLS_FSHARP_ASSEMBLY_NAME).fsproj.in
 	$(SED) -e "s/@PROJECT_VERSION@/$(OR_TOOLS_VERSION)/" \
  ortools$Sdotnet$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME).fsproj.in \
  > ortools$Sdotnet$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME).fsproj
 
+# build and pack nuget
 $(DOTNET_ORTOOLS_FSHARP_NUPKG): \
  $(DOTNET_ORTOOLS_NUPKG) \
  $(SRC_DIR)/ortools/dotnet/$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)/$(OR_TOOLS_FSHARP_ASSEMBLY_NAME).fsproj \
  | $(DOTNET_ORTOOLS_SNK) $(PACKAGE_DIR)
-	"$(DOTNET_BIN)" build ortools$Sdotnet$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)
-	"$(DOTNET_BIN)" pack ortools$Sdotnet$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)
+	"$(DOTNET_BIN)" build $(DOTNET_BUILD_ARGS) ortools$Sdotnet$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)
+	"$(DOTNET_BIN)" pack $(NUGET_PACK_ARGS) ortools$Sdotnet$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)
 
+# create test fsproj
 ortools/dotnet/$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)/$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME).fsproj: \
  ortools/dotnet/$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)/$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME).fsproj.in
 	$(SED) -e "s/@PROJECT_VERSION@/$(OR_TOOLS_VERSION)/" \
@@ -406,8 +426,8 @@ ortools/dotnet/$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)/$(OR_TOOLS_FSHARP_TESTS_AS
 .PHONY: test_dotnet_fsharp # Run F# OrTools Tests
 test_dotnet_fsharp: $(DOTNET_ORTOOLS_FSHARP_NUPKG) \
  ortools/dotnet/$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)/$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME).fsproj
-	"$(DOTNET_BIN)" build ortools$Sdotnet$S$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)
-	"$(DOTNET_BIN)" test ortools$Sdotnet$S$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)
+	"$(DOTNET_BIN)" build $(DOTNET_BUILD_ARGS) ortools$Sdotnet$S$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)
+	"$(DOTNET_BIN)" test $(DOTNET_BUILD_ARGS) ortools$Sdotnet$S$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)
 
 ###################
 ##  .NET SOURCE  ##
@@ -422,9 +442,13 @@ endif
 build: $(SOURCE) $(SOURCE)proj $(DOTNET_ORTOOLS_NUPKG)
 	"$(DOTNET_BIN)" build $(SOURCE_PATH)proj
 
-.PHONY: run # Run a .Net C# program.
+.PHONY: run # Run a .Net C# program (using 'dotnet run').
 run: build
-	"$(DOTNET_BIN)" run --no-build --project $(SOURCE_PATH)proj -- $(ARGS)
+	"$(DOTNET_BIN)" run --no-build $(ARGS) --project $(SOURCE_PATH)proj
+
+.PHONY: run_test # Run a .Net C# program (using 'dotnet test').
+run_test: build
+	"$(DOTNET_BIN)" test --blame --no-build $(ARGS) $(SOURCE_PATH)proj
 endif
 
 # .Net F#
@@ -445,93 +469,30 @@ endif
 #############################
 ##  .NET Examples/Samples  ##
 #############################
-rdotnet_%: \
- $(TEST_DIR)/% \
- $(TEST_DIR)/%proj \
- $(DOTNET_ORTOOLS_NUPKG) FORCE
-	"$(DOTNET_BIN)" build $(TEST_PATH)$S$*proj
-	"$(DOTNET_BIN)" run --no-build --project $(TEST_PATH)$S$*proj -- $(ARGS)
-
-rdotnet_%.cs: \
- $(DOTNET_EX_DIR)/%.cs \
- $(DOTNET_EX_DIR)/%.csproj \
- $(DOTNET_ORTOOLS_NUPKG) FORCE
-	"$(DOTNET_BIN)" build $(DOTNET_EX_PATH)$S$*.csproj
-	"$(DOTNET_BIN)" run --no-build --project $(DOTNET_EX_PATH)$S$*.csproj -- $(ARGS)
-
-rdotnet_%.cs: \
- $(CONTRIB_EX_DIR)/%.cs \
- $(CONTRIB_EX_DIR)/%.csproj \
- $(DOTNET_ORTOOLS_NUPKG) FORCE
-	"$(DOTNET_BIN)" build $(CONTRIB_EX_PATH)$S$*.csproj
-	"$(DOTNET_BIN)" run --no-build --project $(CONTRIB_EX_PATH)$S$*.csproj -- $(ARGS)
-
-rdotnet_%.fs: \
- $(DOTNET_EX_DIR)/%.fs \
- $(DOTNET_EX_DIR)/%.fsproj \
- $(DOTNET_ORTOOLS_FSHARP_NUPKG) FORCE
-	"$(DOTNET_BIN)" build $(DOTNET_EX_PATH)$S$*.fsproj
-	"$(DOTNET_BIN)" run --no-build --project $(DOTNET_EX_PATH)$S$*.fsproj -- $(ARGS)
-
-rdotnet_%.fs: \
- $(CONTRIB_EX_DIR)/%.fs \
- $(CONTRIB_EX_DIR)/%.fsproj \
- $(DOTNET_ORTOOLS_FSHARP_NUPKG) FORCE
-	"$(DOTNET_BIN)" build $(CONTRIB_EX_PATH)$S$*.fsproj
-	"$(DOTNET_BIN)" run --no-build --project $(CONTRIB_EX_PATH)$S$*.fsproj -- $(ARGS)
-
-rdotnet_%.cs: \
- ortools/algorithms/samples/%.cs \
- ortools/algorithms/samples/%.csproj \
- $(DOTNET_ORTOOLS_NUPKG) FORCE
-	"$(DOTNET_BIN)" build ortools$Salgorithms$Ssamples$S$*.csproj
-	"$(DOTNET_BIN)" run --no-build --project ortools$Salgorithms$Ssamples$S$*.csproj -- $(ARGS)
-
-rdotnet_%.cs: \
- ortools/constraint_solver/samples/%.cs \
- ortools/constraint_solver/samples/%.csproj \
- $(DOTNET_ORTOOLS_NUPKG) FORCE
-	"$(DOTNET_BIN)" build ortools$Sconstraint_solver$Ssamples$S$*.csproj
-	"$(DOTNET_BIN)" run --no-build --project ortools$Sconstraint_solver$Ssamples$S$*.csproj -- $(ARGS)
-
-rdotnet_%.cs: \
- ortools/graph/samples/%.cs \
- ortools/graph/samples/%.csproj \
- $(DOTNET_ORTOOLS_NUPKG) FORCE
-	"$(DOTNET_BIN)" build ortools$Sgraph$Ssamples$S$*.csproj
-	"$(DOTNET_BIN)" run --no-build --project ortools$Sgraph$Ssamples$S$*.csproj -- $(ARGS)
-
-rdotnet_%.cs: \
- ortools/linear_solver/samples/%.cs \
- ortools/linear_solver/samples/%.csproj \
- $(DOTNET_ORTOOLS_NUPKG) FORCE
-	"$(DOTNET_BIN)" build ortools$Slinear_solver$Ssamples$S$*.csproj
-	"$(DOTNET_BIN)" run --no-build --project ortools$Slinear_solver$Ssamples$S$*.csproj -- $(ARGS)
-
-rdotnet_%.cs: \
- ortools/sat/samples/%.cs \
- ortools/sat/samples/%.csproj \
- $(DOTNET_ORTOOLS_NUPKG) FORCE
-	"$(DOTNET_BIN)" build ortools$Ssat$Ssamples$S$*.csproj
-	"$(DOTNET_BIN)" run --no-build --project ortools$Ssat$Ssamples$S$*.csproj -- $(ARGS)
-
 .PHONY: test_dotnet_algorithms_samples # Build and Run all .Net LP Samples (located in ortools/algorithms/samples)
-test_dotnet_algorithms_samples: ;
+test_dotnet_algorithms_samples:
+	$(MAKE) run SOURCE=ortools/algorithms/samples/Knapsack.cs
 
 .PHONY: test_dotnet_constraint_solver_samples # Build and Run all .Net CP Samples (located in ortools/constraint_solver/samples)
 test_dotnet_constraint_solver_samples:
+	$(MAKE) run SOURCE=ortools/constraint_solver/samples/SimpleCpProgram.cs
 	$(MAKE) run SOURCE=ortools/constraint_solver/samples/SimpleRoutingProgram.cs
 	$(MAKE) run SOURCE=ortools/constraint_solver/samples/Tsp.cs
+	$(MAKE) run SOURCE=ortools/constraint_solver/samples/TspCities.cs
+	$(MAKE) run SOURCE=ortools/constraint_solver/samples/TspCircuitBoard.cs
 	$(MAKE) run SOURCE=ortools/constraint_solver/samples/TspDistanceMatrix.cs
 	$(MAKE) run SOURCE=ortools/constraint_solver/samples/Vrp.cs
 	$(MAKE) run SOURCE=ortools/constraint_solver/samples/VrpCapacity.cs
 	$(MAKE) run SOURCE=ortools/constraint_solver/samples/VrpDropNodes.cs
 	$(MAKE) run SOURCE=ortools/constraint_solver/samples/VrpGlobalSpan.cs
+	$(MAKE) run SOURCE=ortools/constraint_solver/samples/VrpInitialRoutes.cs
 	$(MAKE) run SOURCE=ortools/constraint_solver/samples/VrpPickupDelivery.cs
 	$(MAKE) run SOURCE=ortools/constraint_solver/samples/VrpPickupDeliveryFifo.cs
 	$(MAKE) run SOURCE=ortools/constraint_solver/samples/VrpPickupDeliveryLifo.cs
+	$(MAKE) run SOURCE=ortools/constraint_solver/samples/VrpResources.cs
 	$(MAKE) run SOURCE=ortools/constraint_solver/samples/VrpStartsEnds.cs
 	$(MAKE) run SOURCE=ortools/constraint_solver/samples/VrpTimeWindows.cs
+	$(MAKE) run SOURCE=ortools/constraint_solver/samples/VrpWithTimeLimit.cs
 
 .PHONY: test_dotnet_graph_samples # Build and Run all .Net LP Samples (located in ortools/graph/samples)
 test_dotnet_graph_samples: ;
@@ -549,6 +510,7 @@ test_dotnet_sat_samples:
 	$(MAKE) run SOURCE=ortools/sat/samples/BoolOrSampleSat.cs
 	$(MAKE) run SOURCE=ortools/sat/samples/ChannelingSampleSat.cs
 	$(MAKE) run SOURCE=ortools/sat/samples/CpIsFunSat.cs
+	$(MAKE) run SOURCE=ortools/sat/samples/EarlinessTardinessCostSampleSat.cs
 	$(MAKE) run SOURCE=ortools/sat/samples/IntervalSampleSat.cs
 	$(MAKE) run SOURCE=ortools/sat/samples/LiteralSampleSat.cs
 	$(MAKE) run SOURCE=ortools/sat/samples/NoOverlapSampleSat.cs
@@ -558,8 +520,10 @@ test_dotnet_sat_samples:
 	$(MAKE) run SOURCE=ortools/sat/samples/ReifiedSampleSat.cs
 	$(MAKE) run SOURCE=ortools/sat/samples/SearchForAllSolutionsSampleSat.cs
 	$(MAKE) run SOURCE=ortools/sat/samples/SimpleSatProgram.cs
+	$(MAKE) run SOURCE=ortools/sat/samples/SolutionHintingSampleSat.cs
 	$(MAKE) run SOURCE=ortools/sat/samples/SolveAndPrintIntermediateSolutionsSampleSat.cs
 	$(MAKE) run SOURCE=ortools/sat/samples/SolveWithTimeLimitSampleSat.cs
+	$(MAKE) run SOURCE=ortools/sat/samples/StepFunctionSampleSat.cs
 	$(MAKE) run SOURCE=ortools/sat/samples/StopAfterNSolutionsSampleSat.cs
 
 .PHONY: check_dotnet_pimpl
@@ -569,18 +533,16 @@ check_dotnet_pimpl: \
  test_dotnet_graph_samples \
  test_dotnet_linear_solver_samples \
  test_dotnet_sat_samples \
- \
- rdotnet_SimpleProgramFSharp.fs
 
 .PHONY: test_dotnet_tests # Build and Run all .Net Tests (located in examples/test)
 test_dotnet_tests:
-	$(MAKE) run SOURCE=examples/tests/issue18.cs
-	$(MAKE) run SOURCE=examples/tests/issue22.cs
-	$(MAKE) run SOURCE=examples/tests/issue33.cs
-	$(MAKE) run SOURCE=examples/tests/testcp.cs
-	$(MAKE) run SOURCE=examples/tests/testlp.cs
-	$(MAKE) run SOURCE=examples/tests/testsat.cs
-	$(MAKE) run SOURCE=examples/tests/test_sat_model.cs
+	$(MAKE) run_test SOURCE=examples/tests/LinearSolverTests.cs
+	$(MAKE) run_test SOURCE=examples/tests/ConstraintSolverTests.cs
+	$(MAKE) run_test SOURCE=examples/tests/RoutingSolverTests.cs
+	$(MAKE) run_test SOURCE=examples/tests/SatSolverTests.cs
+	$(MAKE) run_test SOURCE=examples/tests/issue18.cs
+	$(MAKE) run_test SOURCE=examples/tests/issue22.cs
+	$(MAKE) run_test SOURCE=examples/tests/issue33.cs
 
 .PHONY: test_dotnet_contrib # Build and Run all .Net Examples (located in examples/contrib)
 test_dotnet_contrib:
@@ -700,7 +662,6 @@ test_dotnet_contrib:
 	$(MAKE) run SOURCE=examples/contrib/fsvolsay3-lpSolve.fs
 	$(MAKE) run SOURCE=examples/contrib/fsvolsay3.fs
 	$(MAKE) run SOURCE=examples/contrib/SimpleProgramFSharp.fs
-#	$(MAKE) run SOURCE=examples/contrib/csfz.cs # Flatzinc needed
 #	$(MAKE) run SOURCE=examples/contrib/nontransitive_dice.cs # too long
 #	$(MAKE) run SOURCE=examples/contrib/partition.cs # too long
 #	$(MAKE) run SOURCE=examples/contrib/secret_santa.cs # too long
@@ -708,6 +669,7 @@ test_dotnet_contrib:
 
 .PHONY: test_dotnet_dotnet # Build and Run all .Net Examples (located in examples/dotnet)
 test_dotnet_dotnet:
+	$(MAKE) run SOURCE=examples/dotnet/BalanceGroupSat.cs
 	$(MAKE) run SOURCE=examples/dotnet/cscvrptw.cs
 	$(MAKE) run SOURCE=examples/dotnet/csflow.cs
 	$(MAKE) run SOURCE=examples/dotnet/csintegerprogramming.cs
@@ -719,6 +681,8 @@ test_dotnet_dotnet:
 	$(MAKE) run SOURCE=examples/dotnet/GateSchedulingSat.cs
 	$(MAKE) run SOURCE=examples/dotnet/JobshopFt06Sat.cs
 	$(MAKE) run SOURCE=examples/dotnet/JobshopSat.cs
+	$(MAKE) run SOURCE=examples/dotnet/NetworkRoutingSat.cs \
+ ARGS="--clients=10 --backbones=5 --demands=10 --trafficMin=5 --trafficMax=10 --minClientDegree=2 --maxClientDegree=5 --minBackboneDegree=3 --maxBackboneDegree=5 --maxCapacity=20 --fixedChargeCost=10"
 	$(MAKE) run SOURCE=examples/dotnet/NursesSat.cs
 	$(MAKE) run SOURCE=examples/dotnet/ShiftSchedulingSat.cs
 	$(MAKE) run SOURCE=examples/dotnet/SpeakerSchedulingSat.cs
@@ -739,20 +703,16 @@ clean_dotnet:
 	-$(DELREC) ortools$Sdotnet$SCreateSigningKey$Sbin
 	-$(DELREC) ortools$Sdotnet$SCreateSigningKey$Sobj
 	-$(DEL) $(DOTNET_ORTOOLS_SNK_PATH)
-	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).csproj
-	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)$Sbin
-	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME)$Sobj
-	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)$S$(OR_TOOLS_ASSEMBLY_NAME).csproj
-	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)$Sruntime.json
+	-$(DEL) ortools$Sdotnet$S$(OR_TOOLS_NATIVE_PROJECT_NAME)$S$(OR_TOOLS_NATIVE_PROJECT_NAME)*.csproj
+	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_NATIVE_PROJECT_NAME)$Sbin
+	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_NATIVE_PROJECT_NAME)$Sobj
+	-$(DEL) ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)$S$(OR_TOOLS_ASSEMBLY_NAME)*.csproj
 	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)$Sbin
 	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)$Sobj
-	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_TESTS_ASSEMBLY_NAME)$S$(OR_TOOLS_TESTS_ASSEMBLY_NAME).csproj
-	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_TESTS_ASSEMBLY_NAME)$Sbin
-	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_TESTS_ASSEMBLY_NAME)$Sobj
-	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME).fsproj
+	-$(DEL) ortools$Sdotnet$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)*.fsproj
 	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)$Sbin
 	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)$Sobj
-	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)$S$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME).fsproj
+	-$(DEL) ortools$Sdotnet$S$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)$S$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)*.fsproj
 	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)$Sbin
 	-$(DELREC) ortools$Sdotnet$S$(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)$Sobj
 	-$(DELREC) $(PACKAGE_DIR)
@@ -766,6 +726,8 @@ clean_dotnet:
 	-$(DEL) $(GEN_PATH)$Sortools$Slinear_solver$S*csharp_wrap*
 	-$(DEL) $(GEN_PATH)$Sortools$Ssat$S*.cs
 	-$(DEL) $(GEN_PATH)$Sortools$Ssat$S*csharp_wrap*
+	-$(DEL) $(GEN_PATH)$Sortools$Sutil$S*.cs
+	-$(DEL) $(GEN_PATH)$Sortools$Sutil$S*csharp_wrap*
 	-$(DEL) $(OBJ_DIR)$Sswig$S*_csharp_wrap.$O
 	-$(DEL) $(LIB_DIR)$S$(OR_TOOLS_NATIVE_ASSEMBLY_NAME).*
 	-$(DEL) $(BIN_DIR)$S$(OR_TOOLS_ASSEMBLY_NAME).*
@@ -794,13 +756,13 @@ clean_dotnet:
 ######################
 .PHONY: nuget_archive # Build .Net "Google.OrTools" Nuget Package
 nuget_archive: dotnet | $(TEMP_DOTNET_DIR)
-	"$(DOTNET_BIN)" publish -c Release --no-dependencies --no-restore -f netstandard2.0 \
+	"$(DOTNET_BIN)" publish $(DOTNET_BUILD_ARGS) --no-build --no-dependencies --no-restore -f netstandard2.0 \
  -o "..$S..$S..$S$(TEMP_DOTNET_DIR)" \
  ortools$Sdotnet$S$(OR_TOOLS_ASSEMBLY_NAME)$S$(OR_TOOLS_ASSEMBLY_NAME).csproj
-	"$(DOTNET_BIN)" publish -c Release --no-dependencies --no-restore -f netstandard2.0 \
+	"$(DOTNET_BIN)" publish $(DOTNET_BUILD_ARGS) --no-build --no-dependencies --no-restore -f netstandard2.0 \
  -o "..$S..$S..$S$(TEMP_DOTNET_DIR)" \
  ortools$Sdotnet$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME)$S$(OR_TOOLS_FSHARP_ASSEMBLY_NAME).fsproj
-	"$(DOTNET_BIN)" pack -c Release \
+	"$(DOTNET_BIN)" pack -c Release $(NUGET_PACK_ARGS) --no-build \
  -o "..$S..$S..$S$(BIN_DIR)" \
  ortools$Sdotnet
 
@@ -820,12 +782,14 @@ detect_dotnet:
 	@echo PROTOC = $(PROTOC)
 	@echo DOTNET_SNK = $(DOTNET_SNK)
 	@echo DOTNET_ORTOOLS_SNK = $(DOTNET_ORTOOLS_SNK)
+	@echo SWIG_BINARY = $(SWIG_BINARY)
+	@echo SWIG_INC = $(SWIG_INC)
 	@echo SWIG_DOTNET_LIB_SUFFIX = $(SWIG_DOTNET_LIB_SUFFIX)
 	@echo OR_TOOLS_NATIVE_ASSEMBLY_NAME = $(OR_TOOLS_NATIVE_ASSEMBLY_NAME)
+	@echo OR_TOOLS_NATIVE_PROJECT_NAME =$(OR_TOOLS_NATIVE_PROJECT_NAME)
 	@echo DOTNET_ORTOOLS_NATIVE_NUPKG = $(DOTNET_ORTOOLS_NATIVE_NUPKG)
 	@echo OR_TOOLS_ASSEMBLY_NAME = $(OR_TOOLS_ASSEMBLY_NAME)
 	@echo DOTNET_ORTOOLS_NUPKG = $(DOTNET_ORTOOLS_NUPKG)
-	@echo OR_TOOLS_TESTS_ASSEMBLY_NAME = $(OR_TOOLS_TESTS_ASSEMBLY_NAME)
 	@echo OR_TOOLS_FSHARP_ASSEMBLY_NAME = $(OR_TOOLS_FSHARP_ASSEMBLY_NAME)
 	@echo DOTNET_ORTOOLS_FSHARP_NUPKG = $(DOTNET_ORTOOLS_FSHARP_NUPKG)
 	@echo OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME = $(OR_TOOLS_FSHARP_TESTS_ASSEMBLY_NAME)

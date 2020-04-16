@@ -33,14 +33,14 @@
 %include "std_vector.i"
 
 %include "ortools/base/base.i"
+%include "ortools/util/csharp/vector.i"
 
 %{
 #include "ortools/linear_solver/linear_solver.h"
 #include "ortools/linear_solver/linear_solver.pb.h"
+#include "ortools/linear_solver/model_exporter.h"
 %}
 
-typedef int64_t int64;
-typedef uint64_t uint64;
 
 // We need to forward-declare the proto here, so that the PROTO_* macros
 // involving them work correctly. The order matters very much: this declaration
@@ -60,6 +60,17 @@ class MPSolutionResponse;
 %typemap(csclassmodifiers) operations_research::MPSolver "public partial class"
 
 %template(MpDoubleVector) std::vector<double>;
+VECTOR_AS_CSHARP_ARRAY(double, double, double, MpDoubleVector);
+
+%define CONVERT_VECTOR(CTYPE, TYPE)
+SWIG_STD_VECTOR_ENHANCED(CTYPE*);
+%template(TYPE ## Vector) std::vector<CTYPE*>;
+%enddef  // CONVERT_VECTOR
+
+CONVERT_VECTOR(operations_research::MPConstraint, MPConstraint)
+CONVERT_VECTOR(operations_research::MPVariable, MPVariable)
+
+#undef CONVERT_VECTOR
 
 %ignoreall
 
@@ -84,6 +95,10 @@ class MPSolutionResponse;
 %unignore operations_research::MPSolver::GUROBI_MIXED_INTEGER_PROGRAMMING;
 %unignore operations_research::MPSolver::CPLEX_LINEAR_PROGRAMMING;
 %unignore operations_research::MPSolver::CPLEX_MIXED_INTEGER_PROGRAMMING;
+%unignore operations_research::MPSolver::XPRESS_LINEAR_PROGRAMMING;
+%unignore operations_research::MPSolver::XPRESS_MIXED_INTEGER_PROGRAMMING;
+%unignore operations_research::MPSolver::BOP_INTEGER_PROGRAMMING;
+%unignore operations_research::MPSolver::SAT_INTEGER_PROGRAMMING;
 
 // Expose the MPSolver::ResultStatus enum.
 %unignore operations_research::MPSolver::ResultStatus;
@@ -123,8 +138,10 @@ class MPSolutionResponse;
 %unignore operations_research::MPSolver::SetSolverSpecificParametersAsString;
 %rename (WallTime) operations_research::MPSolver::wall_time;
 %unignore operations_research::MPSolver::Clear;
-%unignore operations_research::MPSolver::NumVariables;
+%unignore operations_research::MPSolver::constraints;
 %unignore operations_research::MPSolver::NumConstraints;
+%unignore operations_research::MPSolver::NumVariables;
+%unignore operations_research::MPSolver::variables;
 %unignore operations_research::MPSolver::EnableOutput;
 %unignore operations_research::MPSolver::SuppressOutput;
 %unignore operations_research::MPSolver::LookupConstraintOrNull;
@@ -145,19 +162,43 @@ class MPSolutionResponse;
 // Extend code.
 %unignore operations_research::MPSolver::ExportModelAsLpFormat(bool);
 %unignore operations_research::MPSolver::ExportModelAsMpsFormat(bool, bool);
+%unignore operations_research::MPSolver::SetHint(
+    const std::vector<operations_research::MPVariable*>&,
+    const std::vector<double>&);
+%unignore operations_research::MPSolver::SetNumThreads;
 %extend operations_research::MPSolver {
   std::string ExportModelAsLpFormat(bool obfuscated) {
-    std::string output;
-    if (!$self->ExportModelAsLpFormat(obfuscated, &output)) return "";
-    return output;
+    operations_research::MPModelExportOptions options;
+    options.obfuscate = obfuscated;
+    operations_research::MPModelProto model;
+    $self->ExportModelToProto(&model);
+    return ExportModelAsLpFormat(model, options).value_or("");
   }
 
   std::string ExportModelAsMpsFormat(bool fixed_format, bool obfuscated) {
-    std::string output;
-    if (!$self->ExportModelAsMpsFormat(fixed_format, obfuscated, &output)) {
-      return "";
+    operations_research::MPModelExportOptions options;
+    options.obfuscate = obfuscated;
+    operations_research::MPModelProto model;
+    $self->ExportModelToProto(&model);
+    return ExportModelAsMpsFormat(model, options).value_or("");
+  }
+
+  void SetHint(const std::vector<operations_research::MPVariable*>& variables,
+               const std::vector<double>& values) {
+    if (variables.size() != values.size()) {
+      LOG(FATAL) << "Different number of variables and values when setting "
+                 << "hint.";
     }
-    return output;
+    std::vector<std::pair<const operations_research::MPVariable*, double> >
+        hint(variables.size());
+    for (int i = 0; i < variables.size(); ++i) {
+      hint[i] = std::make_pair(variables[i], values[i]);
+    }
+    $self->SetHint(hint);
+  }
+
+  bool SetNumThreads(int num_theads) {
+    return $self->SetNumThreads(num_theads).ok();
   }
 }
 
@@ -258,5 +299,6 @@ class MPSolutionResponse;
 %unignore operations_research::MPSolverParameters::SCALING_ON;  // no test
 
 %include "ortools/linear_solver/linear_solver.h"
+%include "ortools/linear_solver/model_exporter.h"
 
 %unignoreall

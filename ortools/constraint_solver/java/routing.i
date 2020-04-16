@@ -16,7 +16,6 @@
 %include "ortools/constraint_solver/java/constraint_solver.i"
 %include "ortools/constraint_solver/java/routing_types.i"
 %include "ortools/constraint_solver/java/routing_index_manager.i"
-%include "ortools/util/java/functions.i"
 
 // We need to forward-declare the proto here, so that PROTO_INPUT involving it
 // works correctly. The order matters very much: this declaration needs to be
@@ -32,40 +31,197 @@ class RoutingSearchParameters;
 #include "ortools/constraint_solver/routing_parameters.pb.h"
 #include "ortools/constraint_solver/routing_parameters.h"
 #include "ortools/constraint_solver/routing.h"
+#include <memory>
 %}
 
-%typemap(in) const std::vector<std::vector<operations_research::RoutingModel::NodeIndex> >&
-(std::vector<std::vector<operations_research::RoutingModel::NodeIndex> > temp) {
-  if ($input) {
-    const int size = jenv->GetArrayLength($input);
-    temp.clear();
-    temp.resize(size);
-    for (int i = 0; i < size; ++i) {
-      jintArray values =
-          (jintArray)jenv->GetObjectArrayElement((jobjectArray)$input, i);
-      const int inner_size = jenv->GetArrayLength(values);
-      jint* inner_values = jenv->GetIntArrayElements(values, nullptr);
-      for (int j = 0; j < inner_size; ++j) {
-        const int value = inner_values[j];
-        temp[i].push_back(operations_research::RoutingModel::NodeIndex(value));
-      }
-      jenv->ReleaseIntArrayElements(values, inner_values, 0);
-      jenv->DeleteLocalRef(values);
-    }
-    $1 = &temp;
-  } else {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null table");
-    return $null;
-  }
-}
+// RoutingModel methods.
+DEFINE_INDEX_TYPE_TYPEDEF(
+    operations_research::RoutingCostClassIndex,
+    operations_research::RoutingModel::CostClassIndex);
+DEFINE_INDEX_TYPE_TYPEDEF(
+    operations_research::RoutingDimensionIndex,
+    operations_research::RoutingModel::DimensionIndex);
+DEFINE_INDEX_TYPE_TYPEDEF(
+    operations_research::RoutingDisjunctionIndex,
+    operations_research::RoutingModel::DisjunctionIndex);
+DEFINE_INDEX_TYPE_TYPEDEF(
+    operations_research::RoutingVehicleClassIndex,
+    operations_research::RoutingModel::VehicleClassIndex);
 
-%ignore operations_research::RoutingModel::AddMatrixDimension(
+namespace operations_research {
+
+// RoutingModel
+%unignore RoutingModel;
+// Map transit callback to Java @FunctionalInterface types.
+// This replaces the RoutingTransitCallback[1-2] in the Java proxy class
+%typemap(javaimports) RoutingModel %{
+// Used to wrap RoutingTransitCallback2
+// see https://docs.oracle.com/javase/8/docs/api/java/util/function/LongBinaryOperator.html
+import java.util.function.LongBinaryOperator;
+// Used to wrap RoutingTransitCallback1
+// see https://docs.oracle.com/javase/8/docs/api/java/util/function/LongUnaryOperator.html
+import java.util.function.LongUnaryOperator;
+%}
+%ignore RoutingModel::AddDimensionDependentDimensionWithVehicleCapacity;
+%ignore RoutingModel::AddHardTypeIncompatibility;
+%ignore RoutingModel::AddMatrixDimension(
     std::vector<std::vector<int64> > values,
     int64 capacity,
     bool fix_start_cumul_to_zero,
     const std::string& name);
-
-%extend operations_research::RoutingModel {
+%ignore RoutingModel::AddSameVehicleRequiredTypeAlternatives;
+%ignore RoutingModel::AddTemporalRequiredTypeAlternatives;
+%ignore RoutingModel::AddTemporalTypeIncompatibility;
+%ignore RoutingModel::CloseVisitTypes;
+%ignore RoutingModel::GetAllDimensionNames;
+%ignore RoutingModel::GetAutomaticFirstSolutionStrategy;
+%ignore RoutingModel::GetDeliveryIndexPairs;
+%ignore RoutingModel::GetDimensions;
+%ignore RoutingModel::GetDimensionsWithSoftAndSpanCosts;
+%ignore RoutingModel::GetDimensionsWithSoftOrSpanCosts;
+%ignore RoutingModel::GetGlobalDimensionCumulOptimizers;
+%ignore RoutingModel::GetHardTypeIncompatibilitiesOfType;
+%ignore RoutingModel::GetLocalDimensionCumulMPOptimizers;
+%ignore RoutingModel::GetLocalDimensionCumulOptimizers;
+%ignore RoutingModel::GetMutableGlobalCumulOptimizer;
+%ignore RoutingModel::GetMutableLocalCumulOptimizer;
+%ignore RoutingModel::GetMutableLocalCumulMPOptimizer;
+%ignore RoutingModel::GetNumberOfVisitTypes;
+%ignore RoutingModel::GetPerfectBinaryDisjunctions;
+%ignore RoutingModel::GetPickupIndexPairs;
+%ignore RoutingModel::GetSameVehicleRequiredTypeAlternativesOfType;
+%ignore RoutingModel::GetTemporalRequiredTypeAlternativesOfType;
+%ignore RoutingModel::GetTemporalTypeIncompatibilitiesOfType;
+%ignore RoutingModel::GetVisitType;
+%ignore RoutingModel::HasHardTypeIncompatibilities;
+%ignore RoutingModel::HasSameVehicleTypeRequirements;
+%ignore RoutingModel::HasTemporalTypeIncompatibilities;
+%ignore RoutingModel::HasTemporalTypeRequirements;
+%ignore RoutingModel::HasTypeRegulations;
+%ignore RoutingModel::MakeStateDependentTransit;
+%ignore RoutingModel::PackCumulsOfOptimizerDimensionsFromAssignment;
+%ignore RoutingModel::RegisterStateDependentTransitCallback;
+%ignore RoutingModel::RemainingTime;
+%ignore RoutingModel::SolveWithParameters(
+    const RoutingSearchParameters& search_parameters,
+    std::vector<const Assignment*>* solutions);
+%ignore RoutingModel::SolveFromAssignmentWithParameters(
+      const Assignment* assignment,
+      const RoutingSearchParameters& search_parameters,
+      std::vector<const Assignment*>* solutions);
+%ignore RoutingModel::TransitCallback;
+%ignore RoutingModel::SetVisitType;
+%ignore RoutingModel::StateDependentTransitCallback;
+%ignore RoutingModel::UnaryTransitCallbackOrNull;
+%rename (activeVar) RoutingModel::ActiveVar;
+%rename (addAllActive) RoutingModel::AddAllActive;
+%rename (addAtSolutionCallback) RoutingModel::AddAtSolutionCallback;
+%rename (addConstantDimension) RoutingModel::AddConstantDimension;
+%rename (addConstantDimensionWithSlack) RoutingModel::AddConstantDimensionWithSlack;
+%rename (addDimension) RoutingModel::AddDimension;
+%rename (addDimensionWithVehicleCapacity) RoutingModel::AddDimensionWithVehicleCapacity;
+%rename (addDimensionWithVehicleTransitAndCapacity) RoutingModel::AddDimensionWithVehicleTransitAndCapacity;
+%rename (addDimensionWithVehicleTransits) RoutingModel::AddDimensionWithVehicleTransits;
+%rename (addDisjunction) RoutingModel::AddDisjunction;
+%rename (addIntervalToAssignment) RoutingModel::AddIntervalToAssignment;
+%rename (addLocalSearchFilter) RoutingModel::AddLocalSearchFilter;
+%rename (addLocalSearchOperator) RoutingModel::AddLocalSearchOperator;
+%rename (addPickupAndDelivery) RoutingModel::AddPickupAndDelivery;
+%rename (addPickupAndDeliverySets) RoutingModel::AddPickupAndDeliverySets;
+%rename (addSearchMonitor) RoutingModel::AddSearchMonitor;
+%rename (addSoftSameVehicleConstraint) RoutingModel::AddSoftSameVehicleConstraint;
+%rename (addToAssignment) RoutingModel::AddToAssignment;
+%rename (addVariableMaximizedByFinalizer) RoutingModel::AddVariableMaximizedByFinalizer;
+%rename (addVariableMinimizedByFinalizer) RoutingModel::AddVariableMinimizedByFinalizer;
+%rename (addVectorDimension) RoutingModel::AddVectorDimension;
+%rename (applyLocks) RoutingModel::ApplyLocks;
+%rename (applyLocksToAllVehicles) RoutingModel::ApplyLocksToAllVehicles;
+%rename (arcIsMoreConstrainedThanArc) RoutingModel::ArcIsMoreConstrainedThanArc;
+%rename (assignmentToRoutes) RoutingModel::AssignmentToRoutes;
+%rename (checkLimit) RoutingModel::CheckLimit;
+%rename (closeModel) RoutingModel::CloseModel;
+%rename (closeModelWithParameters) RoutingModel::CloseModelWithParameters;
+%rename (compactAndCheckAssignment) RoutingModel::CompactAndCheckAssignment;
+%rename (compactAssignment) RoutingModel::CompactAssignment;
+%rename (computeLowerBound) RoutingModel::ComputeLowerBound;
+%rename (costVar) RoutingModel::CostVar;
+%rename (costsAreHomogeneousAcrossVehicles) RoutingModel::CostsAreHomogeneousAcrossVehicles;
+%rename (debugOutputAssignment) RoutingModel::DebugOutputAssignment;
+%rename (end) RoutingModel::End;
+%rename (getAmortizedLinearCostFactorOfVehicles) RoutingModel::GetAmortizedLinearCostFactorOfVehicles;
+%rename (getAmortizedQuadraticCostFactorOfVehicles) RoutingModel::GetAmortizedQuadraticCostFactorOfVehicles;
+%rename (getArcCostForClass) RoutingModel::GetArcCostForClass;
+%rename (getArcCostForFirstSolution) RoutingModel::GetArcCostForFirstSolution;
+%rename (getArcCostForVehicle) RoutingModel::GetArcCostForVehicle;
+%rename (getCostClassIndexOfVehicle) RoutingModel::GetCostClassIndexOfVehicle;
+%rename (getCostClassesCount) RoutingModel::GetCostClassesCount;
+%rename (getDepot) RoutingModel::GetDepot;
+%rename (getDimensionOrDie) RoutingModel::GetDimensionOrDie;
+%rename (getDisjunctionIndices) RoutingModel::GetDisjunctionIndices;
+%rename (getDisjunctionMaxCardinality) RoutingModel::GetDisjunctionMaxCardinality;
+%rename (getDisjunctionPenalty) RoutingModel::GetDisjunctionPenalty;
+%rename (getFixedCostOfVehicle) RoutingModel::GetFixedCostOfVehicle;
+%rename (getHomogeneousCost) RoutingModel::GetHomogeneousCost;
+%rename (getMutableDimension) RoutingModel::GetMutableDimension;
+%rename (getNonZeroCostClassesCount) RoutingModel::GetNonZeroCostClassesCount;
+%rename (getNumOfSingletonNodes) RoutingModel::GetNumOfSingletonNodes;
+%rename (getNumberOfDecisionsInFirstSolution) RoutingModel::GetNumberOfDecisionsInFirstSolution;
+%rename (getNumberOfDisjunctions) RoutingModel::GetNumberOfDisjunctions;
+%rename (getNumberOfRejectsInFirstSolution) RoutingModel::GetNumberOfRejectsInFirstSolution;
+%rename (getNumberOfVisitTypes) RoutingModel::GetNumberOfVisitTypes;
+%rename (getPickupAndDeliveryPolicyOfVehicle) RoutingModel::GetPickupAndDeliveryPolicyOfVehicle;
+%rename (getPrimaryConstrainedDimension) RoutingModel::GetPrimaryConstrainedDimension;
+%rename (getSameVehicleIndicesOfIndex) RoutingModel::GetSameVehicleIndicesOfIndex;
+%rename (getVehicleClassIndexOfVehicle) RoutingModel::GetVehicleClassIndexOfVehicle;
+%rename (getVehicleClassesCount) RoutingModel::GetVehicleClassesCount;
+%rename (getVisitType) RoutingModel::GetVisitType;
+%rename (hasDimension) RoutingModel::HasDimension;
+%rename (hasVehicleWithCostClassIndex) RoutingModel::HasVehicleWithCostClassIndex;
+%rename (ignoreDisjunctionsAlreadyForcedToZero) RoutingModel::IgnoreDisjunctionsAlreadyForcedToZero;
+%rename (isEnd) RoutingModel::IsEnd;
+%rename (isMatchingModel) RoutingModel::IsMatchingModel;
+%rename (isStart) RoutingModel::IsStart;
+%rename (isVehicleAllowedForIndex) RoutingModel::IsVehicleAllowedForIndex;
+%rename (isVehicleUsed) RoutingModel::IsVehicleUsed;
+%rename (makeGuidedSlackFinalizer) RoutingModel::MakeGuidedSlackFinalizer;
+%rename (makeSelfDependentDimensionFinalizer) RoutingModel::MakeSelfDependentDimensionFinalizer;
+%rename (mutablePreAssignment) RoutingModel::MutablePreAssignment;
+%rename (next) RoutingModel::Next;
+%rename (nextVar) RoutingModel::NextVar;
+%rename (nexts) RoutingModel::Nexts;
+%rename (preAssignment) RoutingModel::PreAssignment;
+%rename (readAssignment) RoutingModel::ReadAssignment;
+%rename (readAssignmentFromRoutes) RoutingModel::ReadAssignmentFromRoutes;
+%rename (registerPositiveTransitCallback) RoutingModel::RegisterPositiveTransitCallback;
+%rename (registerTransitCallback) RoutingModel::RegisterTransitCallback;
+%rename (registerUnaryTransitCallback) RoutingModel::RegisterUnaryTransitCallback;
+%rename (restoreAssignment) RoutingModel::RestoreAssignment;
+%rename (routesToAssignment) RoutingModel::RoutesToAssignment;
+%rename (setAllowedVehiclesForIndex) RoutingModel::SetAllowedVehiclesForIndex;
+%rename (setAmortizedCostFactorsOfAllVehicles) RoutingModel::SetAmortizedCostFactorsOfAllVehicles;
+%rename (setAmortizedCostFactorsOfVehicle) RoutingModel::SetAmortizedCostFactorsOfVehicle;
+%rename (setArcCostEvaluatorOfAllVehicles) RoutingModel::SetArcCostEvaluatorOfAllVehicles;
+%rename (setArcCostEvaluatorOfVehicle) RoutingModel::SetArcCostEvaluatorOfVehicle;
+%rename (setAssignmentFromOtherModelAssignment) RoutingModel::SetAssignmentFromOtherModelAssignment;
+%rename (setFirstSolutionEvaluator) RoutingModel::SetFirstSolutionEvaluator;
+%rename (setFixedCostOfAllVehicles) RoutingModel::SetFixedCostOfAllVehicles;
+%rename (setFixedCostOfVehicle) RoutingModel::SetFixedCostOfVehicle;
+%rename (setPickupAndDeliveryPolicyOfAllVehicles) RoutingModel::SetPickupAndDeliveryPolicyOfAllVehicles;
+%rename (setPickupAndDeliveryPolicyOfVehicle) RoutingModel::SetPickupAndDeliveryPolicyOfVehicle;
+%rename (setPrimaryConstrainedDimension) RoutingModel::SetPrimaryConstrainedDimension;
+%rename (setVisitType) RoutingModel::SetVisitType;
+%rename (size) RoutingModel::Size;
+%rename (solve) RoutingModel::Solve;
+%rename (solveFromAssignmentWithParameters) RoutingModel::SolveFromAssignmentWithParameters;
+%rename (solveWithParameters) RoutingModel::SolveWithParameters;
+%rename (start) RoutingModel::Start;
+%rename (unperformedPenalty) RoutingModel::UnperformedPenalty;
+%rename (unperformedPenaltyOrValue) RoutingModel::UnperformedPenaltyOrValue;
+%rename (vehicleVar) RoutingModel::VehicleVar;
+%rename (vehicleVars) RoutingModel::VehicleVars;
+%rename (writeAssignment) RoutingModel::WriteAssignment;
+// Extend:
+%extend RoutingModel {
   void addMatrixDimension(const std::vector<std::vector<int64> >& values,
                           int64 capacity, bool fix_start_cumul_to_zero,
                           const std::string& name) {
@@ -73,194 +229,63 @@ class RoutingSearchParameters;
   }
 }
 
-// Add PickupAndDeliveryPolicy enum value to RoutingModel (like RoutingModel::Status)
-// For C++11 strongly typed enum SWIG support see https://github.com/swig/swig/issues/316
-%extend operations_research::RoutingModel {
-  static const operations_research::RoutingModel::PickupAndDeliveryPolicy ANY =
-  operations_research::RoutingModel::PickupAndDeliveryPolicy::ANY;
-  static const operations_research::RoutingModel::PickupAndDeliveryPolicy LIFO =
-  operations_research::RoutingModel::PickupAndDeliveryPolicy::LIFO;
-  static const operations_research::RoutingModel::PickupAndDeliveryPolicy FIFO =
-  operations_research::RoutingModel::PickupAndDeliveryPolicy::FIFO;
-}
+// RoutingDimension
+%unignore RoutingDimension;
+// Map transit callback to Java @FunctionalInterface types.
+// This replaces the RoutingTransitCallback[1-2] in the Java proxy class
+%typemap(javaimports) RoutingDimension %{
+// Used to wrap std::function<int64(int64 from_index, int64 to_index)> group_delay
+// see https://docs.oracle.com/javase/8/docs/api/java/util/function/LongBinaryOperator.html
+import java.util.function.LongBinaryOperator;
+%}
+%ignore RoutingDimension::GetBreakDistanceDurationOfVehicle;
+%rename (addNodePrecedence) RoutingDimension::AddNodePrecedence;
+%rename (cumulVar) RoutingDimension::CumulVar;
+%rename (fixedTransitVar) RoutingDimension::FixedTransitVar;
+%rename (getBreakIntervalsOfVehicle) RoutingDimension::GetBreakIntervalsOfVehicle;
+%rename (getCumulVarSoftLowerBound) RoutingDimension::GetCumulVarSoftLowerBound;
+%rename (getCumulVarSoftLowerBoundCoefficient) RoutingDimension::GetCumulVarSoftLowerBoundCoefficient;
+%rename (getCumulVarSoftUpperBound) RoutingDimension::GetCumulVarSoftUpperBound;
+%rename (getCumulVarSoftUpperBoundCoefficient) RoutingDimension::GetCumulVarSoftUpperBoundCoefficient;
+%rename (getGlobalSpanCostCoefficient) RoutingDimension::global_span_cost_coefficient;
+%rename (getGroupDelay) RoutingDimension::GetGroupDelay;
+%rename (getNodeVisitTransitsOfVehicle) RoutingDimension::GetNodeVisitTransitsOfVehicle;
+%rename (getSpanCostCoefficientForVehicle) RoutingDimension::GetSpanCostCoefficientForVehicle;
+%rename (getSpanUpperBoundForVehicle) RoutingDimension::GetSpanUpperBoundForVehicle;
+%rename (getTransitValue) RoutingDimension::GetTransitValue;
+%rename (getTransitValueFromClass) RoutingDimension::GetTransitValueFromClass;
+%rename (hasCumulVarSoftLowerBound) RoutingDimension::HasCumulVarSoftLowerBound;
+%rename (hasCumulVarSoftUpperBound) RoutingDimension::HasCumulVarSoftUpperBound;
+%rename (hasPickupToDeliveryLimits) RoutingDimension::HasPickupToDeliveryLimits;
+%rename (setBreakIntervalsOfVehicle) RoutingDimension::SetBreakIntervalsOfVehicle;
+%rename (setCumulVarSoftLowerBound) RoutingDimension::SetCumulVarSoftLowerBound;
+%rename (setCumulVarSoftUpperBound) RoutingDimension::SetCumulVarSoftUpperBound;
+%rename (setGlobalSpanCostCoefficient) RoutingDimension::SetGlobalSpanCostCoefficient;
+%rename (setPickupToDeliveryLimitFunctionForPair) RoutingDimension::SetPickupToDeliveryLimitFunctionForPair;
+%rename (setSpanCostCoefficientForAllVehicles) RoutingDimension::SetSpanCostCoefficientForAllVehicles;
+%rename (setSpanCostCoefficientForVehicle) RoutingDimension::SetSpanCostCoefficientForVehicle;
+%rename (setSpanUpperBoundForVehicle) RoutingDimension::SetSpanUpperBoundForVehicle;
+%rename (shortestTransitionSlack) RoutingDimension::ShortestTransitionSlack;
+%rename (slackVar) RoutingDimension::SlackVar;
+%rename (transitVar) RoutingDimension::TransitVar;
+%rename (vehicleHasBreakIntervals) RoutingDimension::VehicleHasBreakIntervals;
 
-%ignore operations_research::RoutingModel::RegisterStateDependentTransitCallback;
-%ignore operations_research::RoutingModel::StateDependentTransitCallback;
-%ignore operations_research::RoutingModel::MakeStateDependentTransit;
-%ignore operations_research::RoutingModel::AddDimensionDependentDimensionWithVehicleCapacity;
+// RoutingFilteredDecisionBuilder
+%unignore RoutingFilteredDecisionBuilder;
+%rename (getEndChainStart) RoutingFilteredDecisionBuilder::GetEndChainStart;
+%rename (getStartChainEnd) RoutingFilteredDecisionBuilder::GetStartChainEnd;
+%rename (initializeRoutes) RoutingFilteredDecisionBuilder::InitializeRoutes;
+%rename (makeDisjunctionNodesUnperformed) RoutingFilteredDecisionBuilder::MakeDisjunctionNodesUnperformed;
+%rename (makeUnassignedNodesUnperformed) RoutingFilteredDecisionBuilder::MakeUnassignedNodesUnperformed;
 
-// RoutingModel methods.
-%rename (activeVar) operations_research::RoutingModel::ActiveVar;
-%rename (addAllActive) operations_research::RoutingModel::AddAllActive;
-%rename (addAtSolutionCallback) operations_research::RoutingModel::AddAtSolutionCallback;
-%rename (addConstantDimension) operations_research::RoutingModel::AddConstantDimension;
-%rename (addConstantDimensionWithSlack) operations_research::RoutingModel::AddConstantDimensionWithSlack;
-%rename (addDimension) operations_research::RoutingModel::AddDimension;
-%rename (addDimensionWithVehicleCapacity) operations_research::RoutingModel::AddDimensionWithVehicleCapacity;
-%rename (addDimensionWithVehicleTransitAndCapacity) operations_research::RoutingModel::AddDimensionWithVehicleTransitAndCapacity;
-%rename (addDimensionWithVehicleTransits) operations_research::RoutingModel::AddDimensionWithVehicleTransits;
-%rename (addDisjunction) operations_research::RoutingModel::AddDisjunction;
-%rename (addIntervalToAssignment) operations_research::RoutingModel::AddIntervalToAssignment;
-%rename (addLocalSearchFilter) operations_research::RoutingModel::AddLocalSearchFilter;
-%rename (addLocalSearchOperator) operations_research::RoutingModel::AddLocalSearchOperator;
-%rename (addPickupAndDelivery) operations_research::RoutingModel::AddPickupAndDelivery;
-%rename (addPickupAndDeliverySets) operations_research::RoutingModel::AddPickupAndDeliverySets;
-%rename (addSearchMonitor) operations_research::RoutingModel::AddSearchMonitor;
-%rename (addSoftSameVehicleConstraint) operations_research::RoutingModel::AddSoftSameVehicleConstraint;
-%rename (addToAssignment) operations_research::RoutingModel::AddToAssignment;
-%rename (addTypeIncompatibility) operations_research::RoutingModel::AddTypeIncompatibility;
-%rename (addVariableMaximizedByFinalizer) operations_research::RoutingModel::AddVariableMaximizedByFinalizer;
-%rename (addVariableMinimizedByFinalizer) operations_research::RoutingModel::AddVariableMinimizedByFinalizer;
-%rename (addVectorDimension) operations_research::RoutingModel::AddVectorDimension;
-%rename (applyLocks) operations_research::RoutingModel::ApplyLocks;
-%rename (applyLocksToAllVehicles) operations_research::RoutingModel::ApplyLocksToAllVehicles;
-%rename (arcIsMoreConstrainedThanArc) operations_research::RoutingModel::ArcIsMoreConstrainedThanArc;
-%rename (assignmentToRoutes) operations_research::RoutingModel::AssignmentToRoutes;
-%rename (checkLimit) operations_research::RoutingModel::CheckLimit;
-%rename (closeModel) operations_research::RoutingModel::CloseModel;
-%rename (closeModelWithParameters) operations_research::RoutingModel::CloseModelWithParameters;
-%rename (compactAndCheckAssignment) operations_research::RoutingModel::CompactAndCheckAssignment;
-%rename (compactAssignment) operations_research::RoutingModel::CompactAssignment;
-%rename (computeLowerBound) operations_research::RoutingModel::ComputeLowerBound;
-%rename (costVar) operations_research::RoutingModel::CostVar;
-%rename (costsAreHomogeneousAcrossVehicles) operations_research::RoutingModel::CostsAreHomogeneousAcrossVehicles;
-%rename (debugOutputAssignment) operations_research::RoutingModel::DebugOutputAssignment;
-%rename (end) operations_research::RoutingModel::End;
-%rename (getAllDimensionNames) operations_research::RoutingModel::GetAllDimensionNames;
-%rename (getAmortizedLinearCostFactorOfVehicles) operations_research::RoutingModel::GetAmortizedLinearCostFactorOfVehicles;
-%rename (getAmortizedQuadraticCostFactorOfVehicles) operations_research::RoutingModel::GetAmortizedQuadraticCostFactorOfVehicles;
-%rename (getArcCostForClass) operations_research::RoutingModel::GetArcCostForClass;
-%rename (getArcCostForFirstSolution) operations_research::RoutingModel::GetArcCostForFirstSolution;
-%rename (getArcCostForVehicle) operations_research::RoutingModel::GetArcCostForVehicle;
-%rename (getCostClassIndexOfVehicle) operations_research::RoutingModel::GetCostClassIndexOfVehicle;
-%rename (getCostClassesCount) operations_research::RoutingModel::GetCostClassesCount;
-%rename (getDeliveryIndexPairs) operations_research::RoutingModel::GetDeliveryIndexPairs;
-%rename (getDepot) operations_research::RoutingModel::GetDepot;
-%rename (getDimensionOrDie) operations_research::RoutingModel::GetDimensionOrDie;
-%rename (getDimensions) operations_research::RoutingModel::GetDimensions;
-%rename (getDimensionsWithSoftAndSpanCosts) operations_research::RoutingModel::GetDimensionsWithSoftAndSpanCosts;
-%rename (getDimensionsWithSoftOrSpanCosts) operations_research::RoutingModel::GetDimensionsWithSoftOrSpanCosts;
-%rename (getDisjunctionIndices) operations_research::RoutingModel::GetDisjunctionIndices;
-%rename (getDisjunctionMaxCardinality) operations_research::RoutingModel::GetDisjunctionMaxCardinality;
-%rename (getDisjunctionPenalty) operations_research::RoutingModel::GetDisjunctionPenalty;
-%rename (getFixedCostOfVehicle) operations_research::RoutingModel::GetFixedCostOfVehicle;
-%rename (getHomogeneousCost) operations_research::RoutingModel::GetHomogeneousCost;
-%rename (getMutableDimension) operations_research::RoutingModel::GetMutableDimension;
-%rename (getNonZeroCostClassesCount) operations_research::RoutingModel::GetNonZeroCostClassesCount;
-%rename (getNumOfSingletonNodes) operations_research::RoutingModel::GetNumOfSingletonNodes;
-%rename (getNumberOfDecisionsInFirstSolution) operations_research::RoutingModel::GetNumberOfDecisionsInFirstSolution;
-%rename (getNumberOfDisjunctions) operations_research::RoutingModel::GetNumberOfDisjunctions;
-%rename (getNumberOfRejectsInFirstSolution) operations_research::RoutingModel::GetNumberOfRejectsInFirstSolution;
-%rename (getNumberOfVisitTypes) operations_research::RoutingModel::GetNumberOfVisitTypes;
-%rename (getPerfectBinaryDisjunctions) operations_research::RoutingModel::GetPerfectBinaryDisjunctions;
-%rename (getPickupAndDeliveryPolicyOfVehicle) operations_research::RoutingModel::GetPickupAndDeliveryPolicyOfVehicle;
-%rename (getPickupIndexPairs) operations_research::RoutingModel::GetPickupIndexPairs;
-%rename (getPrimaryConstrainedDimension) operations_research::RoutingModel::GetPrimaryConstrainedDimension;
-%rename (getSameVehicleIndicesOfIndex) operations_research::RoutingModel::GetSameVehicleIndicesOfIndex;
-%rename (getTypeIncompatibilities) operations_research::RoutingModel::GetTypeIncompatibilities;
-%rename (getVehicleClassIndexOfVehicle) operations_research::RoutingModel::GetVehicleClassIndexOfVehicle;
-%rename (getVehicleClassesCount) operations_research::RoutingModel::GetVehicleClassesCount;
-%rename (getVisitType) operations_research::RoutingModel::GetVisitType;
-%rename (hasDimension) operations_research::RoutingModel::HasDimension;
-%rename (hasVehicleWithCostClassIndex) operations_research::RoutingModel::HasVehicleWithCostClassIndex;
-%rename (ignoreDisjunctionsAlreadyForcedToZero) operations_research::RoutingModel::IgnoreDisjunctionsAlreadyForcedToZero;
-%rename (isEnd) operations_research::RoutingModel::IsEnd;
-%rename (isMatchingModel) operations_research::RoutingModel::IsMatchingModel;
-%rename (isStart) operations_research::RoutingModel::IsStart;
-%rename (isVehicleAllowedForIndex) operations_research::RoutingModel::IsVehicleAllowedForIndex;
-%rename (isVehicleUsed) operations_research::RoutingModel::IsVehicleUsed;
-%rename (makeGuidedSlackFinalizer) operations_research::RoutingModel::MakeGuidedSlackFinalizer;
-%rename (makeSelfDependentDimensionFinalizer) operations_research::RoutingModel::MakeSelfDependentDimensionFinalizer;
-%rename (mutablePreAssignment) operations_research::RoutingModel::MutablePreAssignment;
-%rename (next) operations_research::RoutingModel::Next;
-%rename (nextVar) operations_research::RoutingModel::NextVar;
-%rename (nexts) operations_research::RoutingModel::Nexts;
-%rename (preAssignment) operations_research::RoutingModel::PreAssignment;
-%rename (readAssignment) operations_research::RoutingModel::ReadAssignment;
-%rename (readAssignmentFromRoutes) operations_research::RoutingModel::ReadAssignmentFromRoutes;
-%rename (registerPositiveTransitCallback) operations_research::RoutingModel::RegisterPositiveTransitCallback;
-%rename (registerTransitCallback) operations_research::RoutingModel::RegisterTransitCallback;
-%rename (registerUnaryTransitCallback) operations_research::RoutingModel::RegisterUnaryTransitCallback;
-%rename (restoreAssignment) operations_research::RoutingModel::RestoreAssignment;
-%rename (routesToAssignment) operations_research::RoutingModel::RoutesToAssignment;
-%rename (setAllowedVehiclesForIndex) operations_research::RoutingModel::SetAllowedVehiclesForIndex;
-%rename (setAmortizedCostFactorsOfAllVehicles) operations_research::RoutingModel::SetAmortizedCostFactorsOfAllVehicles;
-%rename (setAmortizedCostFactorsOfVehicle) operations_research::RoutingModel::SetAmortizedCostFactorsOfVehicle;
-%rename (setArcCostEvaluatorOfAllVehicles) operations_research::RoutingModel::SetArcCostEvaluatorOfAllVehicles;
-%rename (setArcCostEvaluatorOfVehicle) operations_research::RoutingModel::SetArcCostEvaluatorOfVehicle;
-%rename (setAssignmentFromOtherModelAssignment) operations_research::RoutingModel::SetAssignmentFromOtherModelAssignment;
-%rename (setFirstSolutionEvaluator) operations_research::RoutingModel::SetFirstSolutionEvaluator;
-%rename (setFixedCostOfAllVehicles) operations_research::RoutingModel::SetFixedCostOfAllVehicles;
-%rename (setFixedCostOfVehicle) operations_research::RoutingModel::SetFixedCostOfVehicle;
-%rename (setPickupAndDeliveryPolicyOfAllVehicles) operations_research::RoutingModel::SetPickupAndDeliveryPolicyOfAllVehicles;
-%rename (setPickupAndDeliveryPolicyOfVehicle) operations_research::RoutingModel::SetPickupAndDeliveryPolicyOfVehicle;
-%rename (setPrimaryConstrainedDimension) operations_research::RoutingModel::SetPrimaryConstrainedDimension;
-%rename (setVisitType) operations_research::RoutingModel::SetVisitType;
-%rename (size) operations_research::RoutingModel::Size;
-%rename (solve) operations_research::RoutingModel::Solve;
-%rename (solveFromAssignmentWithParameters) operations_research::RoutingModel::SolveFromAssignmentWithParameters;
-%rename (solveWithParameters) operations_research::RoutingModel::SolveWithParameters;
-%rename (start) operations_research::RoutingModel::Start;
-%rename (transitCallback) operations_research::RoutingModel::TransitCallback;
-%rename (unaryTransitCallbackOrNull) operations_research::RoutingModel::UnaryTransitCallbackOrNull;
-%rename (unperformedPenalty) operations_research::RoutingModel::UnperformedPenalty;
-%rename (unperformedPenaltyOrValue) operations_research::RoutingModel::UnperformedPenaltyOrValue;
-%rename (vehicleVar) operations_research::RoutingModel::VehicleVar;
-%rename (vehicleVars) operations_research::RoutingModel::VehicleVars;
-%rename (writeAssignment) operations_research::RoutingModel::WriteAssignment;
+// TypeRegulationsChecker
+%unignore TypeRegulationsChecker;
+%ignore TypeRegulationsChecker::CheckVehicle;
 
-// RoutingDimension methods.
-%rename (cumulVar) operations_research::RoutingDimension::CumulVar;
-%rename (fixedTransitVar) operations_research::RoutingDimension::FixedTransitVar;
-%rename (getBreakIntervalsOfVehicle) operations_research::RoutingDimension::GetBreakIntervalsOfVehicle;
-%rename (getCumulVarSoftLowerBound) operations_research::RoutingDimension::GetCumulVarSoftLowerBound;
-%rename (getCumulVarSoftLowerBoundCoefficient) operations_research::RoutingDimension::GetCumulVarSoftLowerBoundCoefficient;
-%rename (getCumulVarSoftUpperBound) operations_research::RoutingDimension::GetCumulVarSoftUpperBound;
-%rename (getCumulVarSoftUpperBoundCoefficient) operations_research::RoutingDimension::GetCumulVarSoftUpperBoundCoefficient;
-%rename (getGlobalSpanCostCoefficient) operations_research::RoutingDimension::global_span_cost_coefficient;
-%rename (getGroupDelay) operations_research::RoutingDimension::GetGroupDelay;
-%rename (getNodeVisitTransitsOfVehicle) operations_research::RoutingDimension::GetNodeVisitTransitsOfVehicle;
-%rename (getSpanCostCoefficientForVehicle) operations_research::RoutingDimension::GetSpanCostCoefficientForVehicle;
-%rename (getSpanUpperBoundForVehicle) operations_research::RoutingDimension::GetSpanUpperBoundForVehicle;
-%rename (getTransitValue) operations_research::RoutingDimension::GetTransitValue;
-%rename (getTransitValueFromClass) operations_research::RoutingDimension::GetTransitValueFromClass;
-%rename (hasCumulVarSoftLowerBound) operations_research::RoutingDimension::HasCumulVarSoftLowerBound;
-%rename (hasCumulVarSoftUpperBound) operations_research::RoutingDimension::HasCumulVarSoftUpperBound;
-%rename (hasPickupToDeliveryLimits) operations_research::RoutingDimension::HasPickupToDeliveryLimits;
-%rename (setBreakIntervalsOfVehicle) operations_research::RoutingDimension::SetBreakIntervalsOfVehicle;
-%rename (setCumulVarSoftLowerBound) operations_research::RoutingDimension::SetCumulVarSoftLowerBound;
-%rename (setCumulVarSoftUpperBound) operations_research::RoutingDimension::SetCumulVarSoftUpperBound;
-%rename (setGlobalSpanCostCoefficient) operations_research::RoutingDimension::SetGlobalSpanCostCoefficient;
-%rename (setPickupToDeliveryLimitFunctionForPair) operations_research::RoutingDimension::SetPickupToDeliveryLimitFunctionForPair;
-%rename (setSpanCostCoefficientForAllVehicles) operations_research::RoutingDimension::SetSpanCostCoefficientForAllVehicles;
-%rename (setSpanCostCoefficientForVehicle) operations_research::RoutingDimension::SetSpanCostCoefficientForVehicle;
-%rename (setSpanUpperBoundForVehicle) operations_research::RoutingDimension::SetSpanUpperBoundForVehicle;
-%rename (shortestTransitionSlack) operations_research::RoutingDimension::ShortestTransitionSlack;
-%rename (slackVar) operations_research::RoutingDimension::SlackVar;
-%rename (transitVar) operations_research::RoutingDimension::TransitVar;
-%rename (vehicleHasBreakIntervals) operations_research::RoutingDimension::VehicleHasBreakIntervals;
+}  // namespace operations_research
 
-// RoutingFilteredDecisionBuilder methods.
-%rename (getEndChainStart) operations_research::RoutingFilteredDecisionBuilder::GetEndChainStart;
-%rename (getStartChainEnd) operations_research::RoutingFilteredDecisionBuilder::GetStartChainEnd;
-%rename (initializeRoutes) operations_research::RoutingFilteredDecisionBuilder::InitializeRoutes;
-%rename (makeDisjunctionNodesUnperformed) operations_research::RoutingFilteredDecisionBuilder::MakeDisjunctionNodesUnperformed;
-%rename (makeUnassignedNodesUnperformed) operations_research::RoutingFilteredDecisionBuilder::MakeUnassignedNodesUnperformed;
-
-// IntVarFilteredDecisionBuilder.
-%rename (buildSolution) operations_research::IntVarFilteredDecisionBuilder::BuildSolution;
-
-// GlobalCheapestInsertionFilteredDecisionBuilder.
-%rename (buildSolution) operations_research::GlobalCheapestInsertionFilteredDecisionBuilder::BuildSolution;
-
-// LocalCheapestInsertionFilteredDecisionBuilder.
-%rename (buildSolution) operations_research::LocalCheapestInsertionFilteredDecisionBuilder::BuildSolution;
-
-// CheapestAdditionFilteredDecisionBuilder.
-%rename (buildSolution) operations_research::CheapestAdditionFilteredDecisionBuilder::BuildSolution;
-
-// ChristofidesFilteredDecisionBuilder.
-%rename (buildSolution) operations_research::ChristofidesFilteredDecisionBuilder::BuildSolution;
+// Generic rename rules.
+%rename (buildSolution) *::BuildSolution;
 
 // Protobuf support
 PROTO_INPUT(operations_research::RoutingSearchParameters,
@@ -276,20 +301,24 @@ PROTO2_RETURN(operations_research::RoutingModelParameters,
 
 // Wrap routing_types.h, routing_parameters.h according to the SWIG styleguide.
 %ignoreall
+%unignore RoutingTransitCallback1;
 %unignore RoutingTransitCallback2;
 %unignore RoutingIndexPair;
 %unignore RoutingIndexPairs;
 
+namespace operations_research {
 // IMPORTANT(viger): These functions from routing_parameters.h are global, so in
 // java they are in the main.java (import com.[...].constraintsolver.main).
 %rename (defaultRoutingSearchParameters) DefaultRoutingSearchParameters;
 %rename (defaultRoutingModelParameters) DefaultRoutingModelParameters;
 %rename (findErrorInRoutingSearchParameters) FindErrorInRoutingSearchParameters;
-%rename (makeSetValuesFromTargets) operations_research::MakeSetValuesFromTargets;
+%rename (makeSetValuesFromTargets) MakeSetValuesFromTargets;
+}  // namespace operations_research
 
 %include "ortools/constraint_solver/routing_types.h"
 %include "ortools/constraint_solver/routing_parameters.h"
 %unignoreall
 
 // TODO(user): Use ignoreall/unignoreall for this one. A lot of work.
+//swiglint: disable include-h-allglobals
 %include "ortools/constraint_solver/routing.h"

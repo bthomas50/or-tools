@@ -12,8 +12,10 @@
 // limitations under the License.
 
 // [START program]
+// [START import]
 using System;
 using Google.OrTools.LinearSolver;
+// [END import]
 
 public class SimpleMipProgram
 {
@@ -49,15 +51,15 @@ public class SimpleMipProgram
 
     // [START solve]
     Solver.ResultStatus resultStatus = solver.Solve();
+    // [END solve]
+
+    // [START print_solution]
     // Check that the problem has an optimal solution.
     if (resultStatus != Solver.ResultStatus.OPTIMAL)
     {
       Console.WriteLine("The problem does not have an optimal solution!");
       return;
     }
-    // [END solve]
-
-    // [START print_solution]
     Console.WriteLine("Solution:");
     Console.WriteLine("Objective value = " + solver.Objective().Value());
     Console.WriteLine("x = " + x.SolutionValue());

@@ -13,7 +13,6 @@
 """Minimal jobshop example."""
 
 # [START program]
-from __future__ import absolute_import
 from __future__ import print_function
 
 import collections
@@ -23,7 +22,7 @@ import collections
 from ortools.sat.python import cp_model
 
 
-def minimal_jobshop_sat():
+def MinimalJobshopSat():
     """Minimal jobshop problem."""
     # Create the model.
     model = cp_model.CpModel()
@@ -140,5 +139,5 @@ def minimal_jobshop_sat():
         # [END solution_printing]
 
 
-minimal_jobshop_sat()
+MinimalJobshopSat()
 # [END program]

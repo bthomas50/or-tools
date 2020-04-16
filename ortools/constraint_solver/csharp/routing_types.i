@@ -29,22 +29,22 @@
 %define DEFINE_INDEX_TYPE(IndexT)
 
 // Convert IndexT to (32-bit signed) integers.
-%typemap(ctype) IndexT "int"
-%typemap(imtype) IndexT "int"
 %typemap(cstype) IndexT "int"
 %typemap(csin) IndexT "$csinput"
-%typemap(csout) IndexT {
-  return $imcall;
-}
+%typemap(imtype) IndexT "int"
+%typemap(ctype) IndexT "int"
 %typemap(in) IndexT {
   $1 = IndexT($input);
 }
 %typemap(out) IndexT {
   $result = $1.value();
 }
+%typemap(csout) IndexT {
+  return $imcall;
+}
 %typemap(csvarin) IndexT
 %{
-        set { $imcall; }
+   set { $imcall; }
 %}
 %typemap(csvarout, excode=SWIGEXCODE)  IndexT
 %{
@@ -54,8 +54,9 @@
 %}
 
 // Convert std::vector<IndexT> to/from int arrays.
-VECTOR_AS_CSHARP_ARRAY(IndexT, int, int);
-MATRIX_AS_CSHARP_ARRAY(IndexT, int, int);
+VECTOR_AS_CSHARP_ARRAY(IndexT, int, int, CpIntVector);
+// Convert std::vector<std::vector<IndexT>> to/from two-dimensional int arrays.
+JAGGED_MATRIX_AS_CSHARP_ARRAY(IndexT, int, int, CpIntVectorVector);
 
 %enddef  // DEFINE_INDEX_TYPE
 
@@ -76,22 +77,6 @@ DEFINE_INDEX_TYPE(operations_research::RoutingDimensionIndex);
 DEFINE_INDEX_TYPE(operations_research::RoutingDisjunctionIndex);
 DEFINE_INDEX_TYPE(operations_research::RoutingVehicleClassIndex);
 
+// TODO(user): Replace with %ignoreall/%unignoreall
+//swiglint: disable include-h-allglobals
 %include "ortools/constraint_solver/routing_types.h"
-
-%{
-namespace operations_research {
- typedef int64 (*TransitCallback)(int64, int64);
- typedef int64 (*UnaryTransitCallback)(int64);
-}  // namespace operations_research
-%}
-
-%define %DEFINE_CALLBACK(TYPE, CSTYPE)
-  %typemap(ctype) TYPE, TYPE& "void*"
-  %typemap(in) TYPE  %{ $1 = (TYPE)$input; %}
-  %typemap(in) TYPE& %{ $1 = (TYPE*)&$input; %}
-  %typemap(imtype, out="IntPtr") TYPE, TYPE& "CSTYPE"
-  %typemap(cstype, out="IntPtr") TYPE, TYPE& "CSTYPE"
-  %typemap(csin) TYPE, TYPE& "$csinput"
-%enddef
-%DEFINE_CALLBACK(operations_research::TransitCallback, TransitCallback)
-%DEFINE_CALLBACK(operations_research::UnaryTransitCallback, UnaryTransitCallback)

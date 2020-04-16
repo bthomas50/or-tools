@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-# This Python file uses the following encoding: utf-8
-# Copyright 2018 Google LLC
+# Copyright 2010-2018 Google LLC
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,7 +22,7 @@ from ortools.constraint_solver import routing_enums_pb2
 
 
 # [START data_model]
-class DataModel:  # pylint: disable=too-many-instance-attributes
+class DataModel(object):  # pylint: disable=too-many-instance-attributes
     """Stores the data for the problem."""
 
     def __init__(self, args):
@@ -131,36 +129,51 @@ class DataModel:  # pylint: disable=too-many-instance-attributes
             [7, 14, 9, 16, 14, 8, 5, 10, 6, 5, 4, 10, 8, 6, 2, 9, 0],
         ]
         self._time_windows = [
-            (0, 0),  # depot
-            (10, 15),  # 1
+            (0, 5),  # depot
+            (7, 12),  # 1
             (10, 15),  # 2
-            (5, 10),  # 3
-            (5, 10),  # 4
+            (5, 14),  # 3
+            (5, 13),  # 4
             (0, 5),  # 5
             (5, 10),  # 6
-            (0, 5),  # 7
+            (0, 10),  # 7
             (5, 10),  # 8
             (0, 5),  # 9
-            (10, 15),  # 10
+            (10, 16),  # 10
             (10, 15),  # 11
             (0, 5),  # 12
             (5, 10),  # 13
-            (5, 10),  # 14
+            (7, 12),  # 14
             (10, 15),  # 15
-            (5, 10),  # 16
+            (5, 15),  # 16
         ]
-        if args['drop_nodes'] is True:
+        if args['drop_nodes']:
             self._demands = [0, 1, 1, 3, 6, 3, 6, 8, 8, 1, 2, 1, 2, 6, 6, 8, 8]
         else:
             self._demands = [0, 1, 1, 2, 4, 2, 4, 8, 8, 1, 2, 1, 2, 4, 4, 8, 8]
         self._pickups_deliveries = [
-            [1, 6], [2, 10], [4, 3], [5, 9], [7, 8], [15, 11], [13, 12], [16, 14],]
-        if args['tsp'] is True:
+            [1, 6],
+            [2, 10],
+            [4, 3],
+            [5, 9],
+            [7, 8],
+            [15, 11],
+            [13, 12],
+            [16, 14],
+        ]
+
+        if args['tsp']:
             self._num_vehicles = 1
         else:
             self._num_vehicles = 4
-        self._vehicle_capacities = [15, 15, 15, 15]
+            self._vehicle_capacities = [15, 15, 15, 15]
+
+        if args['resources']:
+            self._vehicle_load_time = 5
+            self._vehicle_unload_time = 5
+
         self._depot = 0
+        self._depot_capacity = 2
         self._starts = [1, 2, 15, 16]
         self._ends = [0, 0, 0, 0]
 
@@ -205,6 +218,21 @@ class DataModel:  # pylint: disable=too-many-instance-attributes
         return self._vehicle_capacities
 
     @property
+    def vehicle_load_time(self):
+        """Gets the load time of each vehicles."""
+        return self._vehicle_load_time
+
+    @property
+    def vehicle_unload_time(self):
+        """Gets the unload time of each vehicles."""
+        return self._vehicle_unload_time
+
+    @property
+    def depot_capacity(self):
+        """Gets the depot capacity."""
+        return self._depot_capacity
+
+    @property
     def depot(self):
         """Gets the depot node index."""
         return self._depot
@@ -225,11 +253,11 @@ class DataModel:  # pylint: disable=too-many-instance-attributes
 ###########
 # Printer #
 ###########
-class GoogleColorPalette():
-    """Google color codes palette"""
+class GoogleColorPalette(object):
+    """Google color codes palette."""
 
     def __init__(self):
-        """Initialize Google ColorPalette"""
+        """Initialize Google ColorPalette."""
         self._colors = [('blue', r'#4285F4'), ('red', r'#EA4335'),
                         ('yellow', r'#FBBC05'), ('green', r'#34A853'),
                         ('black', r'#101010'), ('white', r'#FFFFFF')]
@@ -260,7 +288,7 @@ class GoogleColorPalette():
         return dict(self._colors)[name]
 
 
-class SVG():
+class SVG(object):
     """SVG draw primitives."""
 
     @staticmethod
@@ -276,7 +304,7 @@ class SVG():
 
     @staticmethod
     def definitions(colors):
-        """Writes definitions"""
+        """Writes definitions."""
         print(r'<!-- Need this definition to make an arrow marker,'
               ' from https://www.w3.org/TR/svg-markers/ -->')
         print(r'<defs>')
@@ -286,8 +314,8 @@ class SVG():
                 'refX="8" refY="8" markerUnits="strokeWidth" markerWidth="5" markerHeight="5" '
                 'orient="auto">'.format(colorname=color[0]))
             print(
-                r'    <path d="M 0 0 L 16 8 L 0 16 z" stroke="none" fill="{color}"/>'.
-                format(color=color[1]))
+                r'    <path d="M 0 0 L 16 8 L 0 16 z" stroke="none" fill="{color}"/>'
+                .format(color=color[1]))
             print(r'  </marker>')
         print(r'</defs>')
 
@@ -316,14 +344,13 @@ class SVG():
                           'marker-mid:url(#arrow_{colorname})"').format(
                               sz=size, fg=fg_color, colorname=colorname)
         print(r'<polyline points="{x1},{y1} {x2},{y2} {x3},{y3}" {style}/>'.
-              format(
-                  x1=position_1[0],
-                  y1=position_1[1],
-                  x2=(position_1[0] + position_2[0]) / 2,
-                  y2=(position_1[1] + position_2[1]) / 2,
-                  x3=position_2[0],
-                  y3=position_2[1],
-                  style=polyline_style))
+              format(x1=position_1[0],
+                     y1=position_1[1],
+                     x2=(position_1[0] + position_2[0]) / 2,
+                     y2=(position_1[1] + position_2[1]) / 2,
+                     x3=position_2[0],
+                     y3=position_2[1],
+                     style=polyline_style))
 
     @staticmethod
     def draw_circle(position, radius, size, fg_color, bg_color='white'):
@@ -348,7 +375,7 @@ class SVG():
             txt=text))
 
 
-class SVGPrinter():  # pylint: disable=too-many-instance-attributes
+class SVGPrinter(object):  # pylint: disable=too-many-instance-attributes
     """Generate Problem as svg file to stdout."""
 
     # pylint: disable=too-many-arguments
@@ -427,7 +454,7 @@ class SVGPrinter():  # pylint: disable=too-many-instance-attributes
         for vehicle_idx, start in enumerate(self._data.starts):
             del vehicle_idx
             color = self._color_palette.value_from_name('black')
-            #color = self._color_palette.value(vehicle_idx)
+            # color = self._color_palette.value(vehicle_idx)
             loc = self._data.locations[start]
             self._svg.draw_circle(loc, self._radius, self._stroke_width, color,
                                   'white')
@@ -443,7 +470,7 @@ class SVGPrinter():  # pylint: disable=too-many-instance-attributes
         """Draws all the locations but the depot."""
         print(r'<!-- Print locations -->')
         color = self._color_palette.value_from_name('blue')
-        if self._args['starts_ends'] is False:
+        if not self._args['starts_ends']:
             for idx, loc in enumerate(self._data.locations):
                 if idx == self._data.depot:
                     continue
@@ -470,7 +497,7 @@ class SVGPrinter():  # pylint: disable=too-many-instance-attributes
                 for x, y in zip(loc, [self._radius * 1.2, self._radius * 1.1])
             ]
             color = self._color_palette.value_from_name('red')
-            #color = self._color_palette.value(int(math.log(demand, 2)))
+            # color = self._color_palette.value(int(math.log(demand, 2)))
             self._svg.draw_text(demand, position, self._radius, 'none', color)
 
     def draw_pickups_deliveries(self):
@@ -495,9 +522,9 @@ class SVGPrinter():  # pylint: disable=too-many-instance-attributes
                 for x, y in zip(loc, [self._radius * 0, -self._radius * 1.6])
             ]
             color = self._color_palette.value_from_name('red')
-            self._svg.draw_text('[{t1},{t2}]'.format(
-                t1=time_window[0], t2=time_window[1]), position,
-                                self._radius * 0.75, 'none', color)
+            self._svg.draw_text(
+                '[{t1},{t2}]'.format(t1=time_window[0], t2=time_window[1]),
+                position, self._radius * 0.75, 'white', color)
 
 ##############
 ##  ROUTES  ##
@@ -518,8 +545,8 @@ class SVGPrinter():  # pylint: disable=too-many-instance-attributes
         color = self._color_palette.value_from_name('black')
         for node_idx in dropped_nodes:
             loc = self._data.locations[node_idx]
-            self._svg.draw_circle(loc, self._radius, self._stroke_width,
-                                  color, 'white')
+            self._svg.draw_circle(loc, self._radius, self._stroke_width, color,
+                                  'white')
             self._svg.draw_text(node_idx, loc, self._radius, 'none', color)
 
     def routes(self):
@@ -545,7 +572,7 @@ class SVGPrinter():  # pylint: disable=too-many-instance-attributes
         # First print route
         previous_loc_idx = None
         for loc_idx in route:
-            if previous_loc_idx != None and previous_loc_idx != loc_idx:
+            if previous_loc_idx and previous_loc_idx != loc_idx:
                 self._svg.draw_polyline(self._data.locations[previous_loc_idx],
                                         self._data.locations[loc_idx],
                                         self._stroke_width, color, colorname)
@@ -568,7 +595,7 @@ class SVGPrinter():  # pylint: disable=too-many-instance-attributes
             self.draw_route(route, color, colorname)
 
     def tw_routes(self):
-        """Creates the route time window list from the assignment"""
+        """Creates the route time window list from the assignment."""
         if self._assignment is None:
             print('<!-- No solution found. -->')
             return []
@@ -576,68 +603,79 @@ class SVGPrinter():  # pylint: disable=too-many-instance-attributes
         loc_routes = []
         tw_routes = []
         for vehicle_id in range(self._data.num_vehicles):
-            index = self._routing.Start(vehicle_id)  # ignore depot
-            index = self._assignment.Value(self._routing.NextVar(index))
+            index = self._routing.Start(vehicle_id)
+            # index = self._assignment.Value(self._routing.NextVar(index))
             loc_route = []
             tw_route = []
-            while not self._routing.IsEnd(index):
+            while True:
                 node_index = self._manager.IndexToNode(index)
                 loc_route.append(node_index)
                 time_var = time_dimension.CumulVar(index)
-                #route_time = self._assignment.Value(time_var)
                 t_min = self._assignment.Min(time_var)
                 t_max = self._assignment.Max(time_var)
                 tw_route.append((t_min, t_max))
+                if self._routing.IsEnd(index):
+                    break
                 index = self._assignment.Value(self._routing.NextVar(index))
             loc_routes.append(loc_route)
             tw_routes.append(tw_route)
         return zip(loc_routes, tw_routes)
 
-    def draw_tw_route(self, locations, tw_route, color):
-        """Draws the time windows for a Route"""
+    def draw_tw_route(self, route_idx, locations, tw_route, color):
+        """Draws the time windows for a Route."""
+        is_start = -1
         for loc_idx, time_window in zip(locations, tw_route):
             loc = self._data.locations[loc_idx]
-            position = [
-                x + y
-                for x, y in zip(loc, [self._radius * 0, self._radius * 1.8])
-            ]
-            self._svg.draw_text('[{t1},{t2}]'.format(
-                t1=time_window[0], t2=time_window[1]), position,
-                                self._radius * 0.75, 'white', color)
+            if loc_idx == 0:  # special case for depot
+                position = [
+                    x + y for x, y in zip(loc, [
+                        self._radius * is_start, self._radius *
+                        (1.8 + route_idx)
+                    ])
+                ]
+                is_start = 1
+            else:
+                position = [
+                    x + y
+                    for x, y in zip(loc, [self._radius * 0, self._radius * 1.8])
+                ]
+            self._svg.draw_text('[{t_min}]'.format(t_min=time_window[0]),
+                                position, self._radius * 0.75, 'white', color)
 
     def draw_tw_routes(self):
-        """Draws the time window routes"""
+        """Draws the time window routes."""
         print(r'<!-- Print time window routes -->')
         for route_idx, loc_tw in enumerate(self.tw_routes()):
             print(r'<!-- Print time window route {} -->'.format(route_idx))
             color = self._color_palette.value(route_idx)
-            self.draw_tw_route(loc_tw[0], loc_tw[1], color)
+            self.draw_tw_route(route_idx, loc_tw[0], loc_tw[1], color)
 
     def print_to_console(self):
-        """Prints a full svg document on stdout"""
+        """Prints a full svg document on stdout."""
         margin = self._radius * 2 + 2
         size = [8 * 114, 8 * 80]
         self._svg.header(size, margin)
         self._svg.definitions(self._color_palette.colors)
         self.draw_grid()
-        if self._args['solution'] is False:
-            if self._args['pickup_delivery'] is True:
+        if not self._args['solution']:
+            if self._args['pickup_delivery']:
                 self.draw_pickups_deliveries()
             self.draw_locations()
         else:
             self.draw_routes()
             self.draw_drop_nodes()
-        if self._args['starts_ends'] is True:
+        if self._args['starts_ends']:
             self.draw_depots()
         else:
             self.draw_depot()
-        if self._args['capacity'] is True:
+        if self._args['capacity']:
             self.draw_demands()
-        if self._args['drop_nodes'] is True:
+        if self._args['drop_nodes']:
             self.draw_demands()
-        if self._args['time_windows'] is True:
+        if self._args['time_windows'] or self._args['resources']:
             self.draw_time_windows()
-        if self._args['time_windows'] is True and self._args['solution'] is True:
+        if ((self._args['time_windows'] or self._args['resources']) and
+                self._args['solution']):
             self.draw_tw_routes()
         self._svg.footer()
 
@@ -648,52 +686,54 @@ class SVGPrinter():  # pylint: disable=too-many-instance-attributes
 def main():  # pylint: disable=too-many-locals,too-many-branches
     """Entry point of the program."""
     parser = argparse.ArgumentParser(description='Output VRP as svg image.')
-    parser.add_argument(
-        '-tsp', '--tsp', action='store_true', help='use 1 vehicle')
-    parser.add_argument(
-        '-vrp', '--vrp', action='store_true', help='use 4 vehicle')
-    parser.add_argument(
-        '-gs',
-        '--global-span',
-        action='store_true',
-        help='use global span constraints')
-    parser.add_argument(
-        '-c',
-        '--capacity',
-        action='store_true',
-        help='use capacity constraints')
-    parser.add_argument(
-        '-dn',
-        '--drop-nodes',
-        action='store_true',
-        help='allow drop nodes (disjuntion constraints)')
-    parser.add_argument(
-        '-tw',
-        '--time-windows',
-        action='store_true',
-        help='use time-window constraints')
-    parser.add_argument(
-        '-se',
-        '--starts-ends',
-        action='store_true',
-        help='use multiple starts & ends')
-    parser.add_argument(
-        '-pd',
-        '--pickup-delivery',
-        action='store_true',
-        help='use pickup & delivery constraints')
-    parser.add_argument(
-        '-fifo',
-        '--fifo',
-        action='store_true',
-        help='use pickup & delivery FIFO Policy')
-    parser.add_argument(
-        '-lifo',
-        '--lifo',
-        action='store_true',
-        help='use pickup & delivery LIFO Policy')
-    parser.add_argument(
-        '-s', '--solution', action='store_true', help='print solution')
+    parser.add_argument('-tsp',
+                        '--tsp',
+                        action='store_true',
+                        help='use 1 vehicle')
+    parser.add_argument('-vrp',
+                        '--vrp',
+                        action='store_true',
+                        help='use 4 vehicle')
+    parser.add_argument('-gs',
+                        '--global-span',
+                        action='store_true',
+                        help='use global span constraints')
+    parser.add_argument('-c',
+                        '--capacity',
+                        action='store_true',
+                        help='use capacity constraints')
+    parser.add_argument('-r',
+                        '--resources',
+                        action='store_true',
+                        help='use resources constraints')
+    parser.add_argument('-dn',
+                        '--drop-nodes',
+                        action='store_true',
+                        help='allow drop nodes (disjuntion constraints)')
+    parser.add_argument('-tw',
+                        '--time-windows',
+                        action='store_true',
+                        help='use time-window constraints')
+    parser.add_argument('-se',
+                        '--starts-ends',
+                        action='store_true',
+                        help='use multiple starts & ends')
+    parser.add_argument('-pd',
+                        '--pickup-delivery',
+                        action='store_true',
+                        help='use pickup & delivery constraints')
+    parser.add_argument('-fifo',
+                        '--fifo',
+                        action='store_true',
+                        help='use pickup & delivery FIFO Policy')
+    parser.add_argument('-lifo',
+                        '--lifo',
+                        action='store_true',
+                        help='use pickup & delivery LIFO Policy')
+    parser.add_argument('-s',
+                        '--solution',
+                        action='store_true',
+                        help='print solution')
     args = vars(parser.parse_args())
 
     # Instantiate the data problem.
@@ -701,7 +741,7 @@ def main():  # pylint: disable=too-many-locals,too-many-branches
     data = DataModel(args)
     # [END data]
 
-    if args['solution'] is False:
+    if not args['solution']:
         # Print svg on cout
         printer = SVGPrinter(args, data)
         printer.print_to_console()
@@ -709,12 +749,13 @@ def main():  # pylint: disable=too-many-locals,too-many-branches
 
     # Create the routing index manager.
     # [START index_manager]
-    if args['starts_ends'] is True:
-        manager = pywrapcp.RoutingIndexManager(
-            len(data.locations), data.num_vehicles, data.starts, data.ends)
+    if args['starts_ends']:
+        manager = pywrapcp.RoutingIndexManager(len(data.locations),
+                                               data.num_vehicles, data.starts,
+                                               data.ends)
     else:
-        manager = pywrapcp.RoutingIndexManager(
-            len(data.locations), data.num_vehicles, data.depot)
+        manager = pywrapcp.RoutingIndexManager(len(data.locations),
+                                               data.num_vehicles, data.depot)
     # [END index_manager]
 
     # Create Routing Model.
@@ -753,26 +794,30 @@ def main():  # pylint: disable=too-many-locals,too-many-branches
     demand_callback_index = routing.RegisterUnaryTransitCallback(
         demand_callback)
 
-    if args['time_windows'] is True:
+    if args['time_windows'] or args['resources']:
         routing.SetArcCostEvaluatorOfAllVehicles(time_callback_index)
     else:
         routing.SetArcCostEvaluatorOfAllVehicles(distance_callback_index)
 
-    if (args['global_span'] is True) or (args['pickup_delivery'] is True):
+    if args['global_span'] or args['pickup_delivery']:
         dimension_name = 'Distance'
         routing.AddDimension(distance_callback_index, 0, 3000, True,
                              dimension_name)
         distance_dimension = routing.GetDimensionOrDie(dimension_name)
         distance_dimension.SetGlobalSpanCostCoefficient(100)
-    if (args['capacity'] is True) or (args['drop_nodes'] is True):
-        routing.AddDimensionWithVehicleCapacity(
-            demand_callback_index, 0, data.vehicle_capacities, True, 'Capacity')
-    if args['drop_nodes'] is True:
+
+    if args['capacity'] or args['drop_nodes']:
+        routing.AddDimensionWithVehicleCapacity(demand_callback_index, 0,
+                                                data.vehicle_capacities, True,
+                                                'Capacity')
+
+    if args['drop_nodes']:
         # Allow to drop nodes.
         penalty = 1000
         for node in range(1, len(data.locations)):
             routing.AddDisjunction([manager.NodeToIndex(node)], penalty)
-    if args['pickup_delivery'] is True:
+
+    if args['pickup_delivery']:
         dimension_name = 'Distance'
         routing.AddDimension(distance_callback_index, 0, 3000, True,
                              dimension_name)
@@ -788,24 +833,26 @@ def main():  # pylint: disable=too-many-locals,too-many-branches
             routing.solver().Add(
                 distance_dimension.CumulVar(pickup_index) <=
                 distance_dimension.CumulVar(delivery_index))
-        if args['fifo'] is True:
+        if args['fifo']:
             routing.SetPickupAndDeliveryPolicyOfAllVehicles(
                 pywrapcp.RoutingModel.FIFO)
-        if args['lifo'] is True:
+        if args['lifo']:
             routing.SetPickupAndDeliveryPolicyOfAllVehicles(
                 pywrapcp.RoutingModel.LIFO)
-    if args['starts_ends'] is True:
+
+    if args['starts_ends']:
         dimension_name = 'Distance'
         routing.AddDimension(distance_callback_index, 0, 2000, True,
                              dimension_name)
         distance_dimension = routing.GetDimensionOrDie(dimension_name)
         distance_dimension.SetGlobalSpanCostCoefficient(100)
-    if args['time_windows'] is True:
-        time = 'Time'
+
+    time = 'Time'
+    if args['time_windows'] or args['resources']:
         routing.AddDimension(time_callback_index, 30, 30, False, time)
         time_dimension = routing.GetDimensionOrDie(time)
-        # Add time window constraints for each location except depot
-        # and 'copy' the slack var in the solution object (aka Assignment) to print it
+        # Add time window constraints for each location except depot and 'copy' the
+        # slack var in the solution object (aka Assignment) to print it.
         for location_idx, time_window in enumerate(data.time_windows):
             if location_idx == 0:
                 continue
@@ -813,8 +860,8 @@ def main():  # pylint: disable=too-many-locals,too-many-branches
             time_dimension.CumulVar(index).SetRange(time_window[0],
                                                     time_window[1])
             routing.AddToAssignment(time_dimension.SlackVar(index))
-        # Add time window constraints for each vehicle start node
-        # and 'copy' the slack var in the solution object (aka Assignment) to print it
+        # Add time window constraints for each vehicle start node and 'copy' the
+        # slack var in the solution object (aka Assignment) to print it.
         for vehicle_id in range(data.num_vehicles):
             index = routing.Start(vehicle_id)
             time_window = data.time_windows[0]
@@ -822,10 +869,39 @@ def main():  # pylint: disable=too-many-locals,too-many-branches
                                                     time_window[1])
             routing.AddToAssignment(time_dimension.SlackVar(index))
 
+        # Instantiate route start and end times to produce feasible times.
+        for vehicle_id in range(data.num_vehicles):
+            routing.AddVariableMinimizedByFinalizer(
+                time_dimension.CumulVar(routing.End(vehicle_id)))
+            routing.AddVariableMinimizedByFinalizer(
+                time_dimension.CumulVar(routing.Start(vehicle_id)))
+
+    if args['resources']:
+        # Add resource constraints at the depot.
+        time_dimension = routing.GetDimensionOrDie(time)
+        solver = routing.solver()
+        intervals = []
+        for i in range(data.num_vehicles):
+            # Add loading time at start of routes
+            intervals.append(
+                solver.FixedDurationIntervalVar(
+                    time_dimension.CumulVar(routing.Start(i)),
+                    data.vehicle_load_time, 'depot_interval'))
+            # Add unloading time at end of routes.
+            intervals.append(
+                solver.FixedDurationIntervalVar(
+                    time_dimension.CumulVar(routing.End(i)),
+                    data.vehicle_unload_time, 'depot_interval '))
+
+        depot_usage = [1 for i in range(data.num_vehicles * 2)]
+        solver.AddConstraint(
+            solver.Cumulative(intervals, depot_usage, data.depot_capacity,
+                              'depot'))
+
     # Setting first solution heuristic (cheapest addition).
     search_parameters = pywrapcp.DefaultRoutingSearchParameters()
     # pylint: disable=no-member
-    if args['pickup_delivery'] is False:
+    if not args['pickup_delivery']:
         search_parameters.first_solution_strategy = (
             routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
     else:

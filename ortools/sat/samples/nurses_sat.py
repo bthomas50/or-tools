@@ -13,9 +13,8 @@
 """Example of a simple nurse scheduling problem."""
 
 # [START program]
-from __future__ import division
-from __future__ import print_function
 # [START import]
+from __future__ import print_function
 from ortools.sat.python import cp_model
 
 # [END import]
@@ -35,7 +34,6 @@ class NursesPartialSolutionPrinter(cp_model.CpSolverSolutionCallback):
         self._solution_count = 0
 
     def on_solution_callback(self):
-        self._solution_count += 1
         if self._solution_count in self._solutions:
             print('Solution %i' % self._solution_count)
             for d in range(self._num_days):
@@ -49,6 +47,7 @@ class NursesPartialSolutionPrinter(cp_model.CpSolverSolutionCallback):
                     if not is_working:
                         print('  Nurse {} does not work'.format(n))
             print()
+        self._solution_count += 1
 
     def solution_count(self):
         return self._solution_count
@@ -79,8 +78,8 @@ def main():
     for n in all_nurses:
         for d in all_days:
             for s in all_shifts:
-                shifts[(n, d, s)] = model.NewBoolVar('shift_n%id%is%i' % (n, d,
-                                                                          s))
+                shifts[(n, d,
+                        s)] = model.NewBoolVar('shift_n%id%is%i' % (n, d, s))
     # [END variables]
 
     # Each shift is assigned to exactly one nurse in the schedule period.
@@ -115,10 +114,12 @@ def main():
     # Creates the solver and solve.
     # [START solve]
     solver = cp_model.CpSolver()
+    solver.parameters.linearization_level = 0
     # Display the first five solutions.
     a_few_solutions = range(5)
-    solution_printer = NursesPartialSolutionPrinter(
-        shifts, num_nurses, num_days, num_shifts, a_few_solutions)
+    solution_printer = NursesPartialSolutionPrinter(shifts, num_nurses,
+                                                    num_days, num_shifts,
+                                                    a_few_solutions)
     solver.SearchForAllSolutions(model, solution_printer)
     # [END solve]
 

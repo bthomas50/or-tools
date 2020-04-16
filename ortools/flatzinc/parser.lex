@@ -19,26 +19,26 @@
 #endif
 %}
 
-/* Rules that parse the bottom-line std::string tokens of a .fz file and
+/* Rules that parse the bottom-line string tokens of a .fz file and
    convert them into YACC tokens, which may carry a value. See the
    LexerInfo struct and the %token declarations in ./parser.yy. */
 
 %%
-"array"         { return ARRAY;     }
-"bool"          { return BOOL;      }
-"constraint"    { return CONSTRAINT;}
-"float"         { return FLOAT;     }
-"int"           { return INT;       }
-"maximize"      { return MAXIMIZE;  }
-"minimize"      { return MINIMIZE;  }
-"of"            { return OF;        }
-"predicate"     { return PREDICATE; }
-"satisfy"       { return SATISFY;   }
-"set"           { return SET;       }
-"solve"         { return SOLVE;     }
-"var"           { return VAR;       }
-\.\.            { return DOTDOT;    }
-::              { return COLONCOLON;}
+"array"         { return ARRAY;      }
+"bool"          { return TOKEN_BOOL; }
+"constraint"    { return CONSTRAINT; }
+"float"         { return TOKEN_FLOAT;}
+"int"           { return TOKEN_INT;  }
+"maximize"      { return MAXIMIZE;   }
+"minimize"      { return MINIMIZE;   }
+"of"            { return OF;         }
+"predicate"     { return PREDICATE;  }
+"satisfy"       { return SATISFY;    }
+"set"           { return SET;        }
+"solve"         { return SOLVE;      }
+"var"           { return VAR;        }
+\.\.            { return DOTDOT;     }
+::              { return COLONCOLON; }
 
 "true" {
   yylval->integer_value = 1;

@@ -36,6 +36,19 @@ class RoutingSearchParameters;
 #include "ortools/util/optional_boolean.pb.h"
 %}
 
+DEFINE_INDEX_TYPE_TYPEDEF(
+    operations_research::RoutingCostClassIndex,
+    operations_research::RoutingModel::CostClassIndex);
+DEFINE_INDEX_TYPE_TYPEDEF(
+    operations_research::RoutingDimensionIndex,
+    operations_research::RoutingModel::DimensionIndex);
+DEFINE_INDEX_TYPE_TYPEDEF(
+    operations_research::RoutingDisjunctionIndex,
+    operations_research::RoutingModel::DisjunctionIndex);
+DEFINE_INDEX_TYPE_TYPEDEF(
+    operations_research::RoutingVehicleClassIndex,
+    operations_research::RoutingModel::VehicleClassIndex);
+
 
 %ignore operations_research::RoutingModel::AddMatrixDimension(
     std::vector<std::vector<int64> > values,
@@ -50,17 +63,6 @@ class RoutingSearchParameters;
     const std::string& name) {
     $self->AddMatrixDimension(values, capacity, fix_start_cumul_to_zero, name);
   }
-}
-
-// Add PickupAndDeliveryPolicy enum value to RoutingModel (like RoutingModel::Status)
-// For C++11 strongly typed enum SWIG support see https://github.com/swig/swig/issues/316
-%extend operations_research::RoutingModel {
-  static const operations_research::RoutingModel::PickupAndDeliveryPolicy ANY =
-  operations_research::RoutingModel::PickupAndDeliveryPolicy::ANY;
-  static const operations_research::RoutingModel::PickupAndDeliveryPolicy LIFO =
-  operations_research::RoutingModel::PickupAndDeliveryPolicy::LIFO;
-  static const operations_research::RoutingModel::PickupAndDeliveryPolicy FIFO =
-  operations_research::RoutingModel::PickupAndDeliveryPolicy::FIFO;
 }
 
 %ignore operations_research::RoutingModel::RegisterStateDependentTransitCallback;
@@ -101,4 +103,5 @@ enum OptionalBoolean {
 }  // namespace operations_research
 
 // TODO(user): Use ignoreall/unignoreall for this one. A lot of work.
+//swiglint: disable include-h-allglobals
 %include "ortools/constraint_solver/routing.h"
