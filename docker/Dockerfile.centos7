@@ -1,8 +1,13 @@
 FROM centos:7
 
+RUN yum install -y \
+      centos-release-scl && \
+    yum clean all
+
 RUN yum install -y gcc \
   autoconf \
   curl \
+  devtoolset-8 \
   gcc-c++ \
   git \
   gmp-devel \
@@ -19,16 +24,6 @@ RUN yum install -y gcc \
   zlib-devel \
   && yum clean all
 
-RUN curl ftp://ftp.mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-4.9.2/gcc-4.9.2.tar.bz2 -O && \
-    tar xvfj gcc-4.9.2.tar.bz2 && \
-    cd gcc-4.9.2 && \
-    ./configure --disable-multilib --enable-languages=c,c++ && \
-    make -j$(nproc) && \
-    make install && \
-    cd .. && \
-    rm -r gcc-4.9.2 && \
-    rm gcc-4.9.2.tar.bz2
-
 RUN wget -q https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh && \
     chmod +x cmake-3.11.4-Linux-x86_64.sh && \
     ./cmake-3.11.4-Linux-x86_64.sh --skip-license --prefix=/usr && \
@@ -39,7 +34,7 @@ WORKDIR /opt/or-tools
 
 ARG ARTIFACTORY_API_KEY
 
-RUN make -j$(nproc) third_party
-RUN make -j$(nproc) cc
+RUN scl enable devtoolset-8 'make -j$(nproc) third_party'
+RUN scl enable devtoolset-8 'make -j$(nproc) cc'
 
 RUN docker/scripts/archive.sh
