@@ -1,0 +1,30 @@
+FROM centos:8
+
+RUN yum install -y gcc \
+  autoconf \
+  cmake \
+  curl \
+  gcc-c++ \
+  git \
+  gmp-devel \
+  make \
+  mpfr-devel \
+  libtool \
+  pkg-config \
+  python3 \
+  redhat-lsb \
+  rpm-build \
+  wget \
+  which \
+  zlib-devel \
+  && yum clean all
+
+COPY . /opt/or-tools
+WORKDIR /opt/or-tools
+
+ARG ARTIFACTORY_API_KEY
+
+RUN make -j$(nproc) third_party
+RUN make -j$(nproc) cc
+
+RUN docker/scripts/archive.sh
