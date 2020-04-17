@@ -1,23 +1,26 @@
 FROM ubuntu:16.04
 
 RUN apt-get update && apt-get install -y \
+  autoconf \
+  build-essential \
   curl \
   git \
-  wget \
-  pkg-config \
-  build-essential \
-  cmake \
-  autoconf \
   libtool \
-  zlib1g-dev \
-  lsb-release
+  lsb-release \
+  pkg-config \
+  wget \
+  zlib1g-dev
+
+RUN wget -q https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh && \
+    chmod +x cmake-3.11.4-Linux-x86_64.sh && \
+    ./cmake-3.11.4-Linux-x86_64.sh --skip-license --prefix=/usr && \
+    rm cmake-3.11.4-Linux-x86_64.sh
 
 COPY . /opt/or-tools
 WORKDIR /opt/or-tools
 
+RUN make -j$(nproc) third_party
+RUN make -j$(nproc) cc
+
 ARG ARTIFACTORY_API_KEY
-
-RUN make third_party
-RUN make cc
-
 RUN docker/scripts/archive.sh
