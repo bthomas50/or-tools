@@ -285,7 +285,7 @@ dependencies/sources/protobuf-$(PROTOBUF_TAG): patches/protobuf-$(PROTOBUF_TAG).
 	-$(DELREC) dependencies/sources/protobuf-$(PROTOBUF_TAG)
 	git clone --quiet -b $(PROTOBUF_TAG) https://github.com/google/protobuf.git dependencies/sources/protobuf-$(PROTOBUF_TAG)
 	cd dependencies/sources/protobuf-$(PROTOBUF_TAG) && \
-    git apply "$(OR_TOOLS_TOP)/patches/protobuf-3.6.1.patch"
+    git apply "$(OR_TOOLS_TOP)/patches/protobuf-v3.6.1.patch"
 
 # This is needed to find protocol buffers.
 PROTOBUF_INC = -I$(UNIX_PROTOBUF_DIR)/include
