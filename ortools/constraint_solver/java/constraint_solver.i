@@ -15,7 +15,6 @@
 
 %include "enumsimple.swg"
 %include "exception.i"
-%include "stdint.i"
 
 %include "ortools/base/base.i"
 %include "ortools/util/java/tuple_set.i"
@@ -1311,17 +1310,17 @@ import java.util.function.Supplier;
 
 // IntVarLocalSearchHandler
 %unignore IntVarLocalSearchHandler;
-%ignore IntVarLocalSearchHandler::AddToAssignment;
+%rename (addToAssignment) IntVarLocalSearchHandler::AddToAssignment;
 %rename (onAddVars) IntVarLocalSearchHandler::OnAddVars;
 %rename (onRevertChanges) IntVarLocalSearchHandler::OnRevertChanges;
-%rename (valueFromAssignment) IntVarLocalSearchHandler::ValueFromAssignment;
+%rename (valueFromAssignent) IntVarLocalSearchHandler::ValueFromAssignent;
 
 // SequenceVarLocalSearchHandler
 %unignore SequenceVarLocalSearchHandler;
-%ignore SequenceVarLocalSearchHandler::AddToAssignment;
-%ignore SequenceVarLocalSearchHandler::ValueFromAssignment;
+%rename (addToAssignment) SequenceVarLocalSearchHandler::AddToAssignment;
 %rename (onAddVars) SequenceVarLocalSearchHandler::OnAddVars;
 %rename (onRevertChanges) SequenceVarLocalSearchHandler::OnRevertChanges;
+%rename (valueFromAssignent) SequenceVarLocalSearchHandler::ValueFromAssignent;
 
 // LocalSearchOperator
 %feature("director") LocalSearchOperator;

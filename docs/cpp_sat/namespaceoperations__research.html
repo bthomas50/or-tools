@@ -12,7 +12,7 @@
     <body>
         <div id="banner-container">
             <div id="banner">
-                <span id="sfml">Google OR-Tools 7.5</span>
+                <span id="sfml">Google OR-Tools 7.7</span>
             </div>
         </div>
         <div id="content" style="width: 100%; overflow: hidden;">
@@ -110,7 +110,7 @@ Functions</h2></td></tr>
 <p>Returns true iff we have: </p>
 <ul>
 <li>The intervals appear in increasing order.</li>
-<li>for all i: intervals[i].start &lt;= intervals[i].end</li>
+<li>for all i: intervals[i].start &lt;= intervals[i].end (should always be true, by construction, but bad intervals can in practice escape detection in opt mode).</li>
 <li>for all i but the last: intervals[i].end + 1 &lt; intervals[i+1].start </li>
 </ul>
 

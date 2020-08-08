@@ -12,7 +12,7 @@
     <body>
         <div id="banner-container">
             <div id="banner">
-                <span id="sfml">Google OR-Tools 7.5</span>
+                <span id="sfml">Google OR-Tools 7.7</span>
             </div>
         </div>
         <div id="content" style="width: 100%; overflow: hidden;">
@@ -48,6 +48,7 @@
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-static-attribs">Static Public Attributes</a> &#124;
+<a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="#pro-attribs">Protected Attributes</a> &#124;
 <a href="#properties">Properties</a> &#124;
 <a href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel-members.html">List of all members</a>  </div>
@@ -61,8 +62,8 @@
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a1b40a2658f30f8466f310ceea310afb5"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#a1b40a2658f30f8466f310ceea310afb5">Dispose</a> ()</td></tr>
-<tr class="separator:a1b40a2658f30f8466f310ceea310afb5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e2d745cdb7a7b983f861ed6a9a541a7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#a6e2d745cdb7a7b983f861ed6a9a541a7">Dispose</a> ()</td></tr>
+<tr class="separator:a6e2d745cdb7a7b983f861ed6a9a541a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8fe89a3384e693de516e6109cfbbc762"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#a8fe89a3384e693de516e6109cfbbc762">RoutingModel</a> (<a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingIndexManager.html">RoutingIndexManager</a> index_manager)</td></tr>
 <tr class="separator:a8fe89a3384e693de516e6109cfbbc762"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1fb0c7d83022207c02228923ea71912c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#a1fb0c7d83022207c02228923ea71912c">RoutingModel</a> (<a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingIndexManager.html">RoutingIndexManager</a> index_manager, <a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModelParameters.html">Google.OrTools.ConstraintSolver.RoutingModelParameters</a> parameters)</td></tr>
@@ -137,12 +138,22 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a42196dbca9b43c4c658e6e0b06e7fadc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac4aceddcc1896240ce8087a094b02b56"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#ac4aceddcc1896240ce8087a094b02b56">GetNumOfSingletonNodes</a> ()</td></tr>
 <tr class="separator:ac4aceddcc1896240ce8087a094b02b56"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae9a4b32049c139b3bf5710781ad2727b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#ae9a4b32049c139b3bf5710781ad2727b">SetVisitType</a> (long index, int type)</td></tr>
-<tr class="separator:ae9a4b32049c139b3bf5710781ad2727b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0582c845c07b1b0dd1aa8d4db4c1581d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#a0582c845c07b1b0dd1aa8d4db4c1581d">SetVisitType</a> (long index, int type, int type_policy)</td></tr>
+<tr class="separator:a0582c845c07b1b0dd1aa8d4db4c1581d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae609c4446ba2bbc07114ac939cbcc2c0"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#ae609c4446ba2bbc07114ac939cbcc2c0">GetVisitType</a> (long index)</td></tr>
 <tr class="separator:ae609c4446ba2bbc07114ac939cbcc2c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d39e29ef34d15e9addf42185bf57fa2"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#a5d39e29ef34d15e9addf42185bf57fa2">GetVisitTypePolicy</a> (long index)</td></tr>
+<tr class="separator:a5d39e29ef34d15e9addf42185bf57fa2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad4f1108da751a34d46fc1a358998616b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#ad4f1108da751a34d46fc1a358998616b">GetNumberOfVisitTypes</a> ()</td></tr>
 <tr class="separator:ad4f1108da751a34d46fc1a358998616b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad74eb0736dcac1394cdecd3e63dd1314"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#ad74eb0736dcac1394cdecd3e63dd1314">AddRequiredTypeAlternativesWhenAddingType</a> (int dependent_type, SWIGTYPE_p_absl__flat_hash_setT_int_t required_type_alternatives)</td></tr>
+<tr class="separator:ad74eb0736dcac1394cdecd3e63dd1314"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2a7cc0ae71e4f17302b174bbb8e359df"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#a2a7cc0ae71e4f17302b174bbb8e359df">AddRequiredTypeAlternativesWhenRemovingType</a> (int dependent_type, SWIGTYPE_p_absl__flat_hash_setT_int_t required_type_alternatives)</td></tr>
+<tr class="separator:a2a7cc0ae71e4f17302b174bbb8e359df"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a450927393434e1fa5b413e763a82c29e"><td class="memItemLeft" align="right" valign="top">SWIGTYPE_p_std__vectorT_absl__flat_hash_setT_int_t_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#a450927393434e1fa5b413e763a82c29e">GetRequiredTypeAlternativesWhenAddingType</a> (int type)</td></tr>
+<tr class="separator:a450927393434e1fa5b413e763a82c29e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa634a76f4da6df02b9b94ae7b76fdd25"><td class="memItemLeft" align="right" valign="top">SWIGTYPE_p_std__vectorT_absl__flat_hash_setT_int_t_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#aa634a76f4da6df02b9b94ae7b76fdd25">GetRequiredTypeAlternativesWhenRemovingType</a> (int type)</td></tr>
+<tr class="separator:aa634a76f4da6df02b9b94ae7b76fdd25"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a20f9c3d073aa60a270a722d27f4b4ccd"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#a20f9c3d073aa60a270a722d27f4b4ccd">UnperformedPenalty</a> (long var_index)</td></tr>
 <tr class="separator:a20f9c3d073aa60a270a722d27f4b4ccd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad04463ba355c4ff904f2b05cb6b64a5b"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#ad04463ba355c4ff904f2b05cb6b64a5b">UnperformedPenaltyOrValue</a> (long default_value, long var_index)</td></tr>
@@ -330,6 +341,19 @@ Static Public Attributes</h2></td></tr>
 <tr class="separator:a58c61ea002bdf22d03267cc379d4d3ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af123110d7594a9000b76b14df6eafd51"><td class="memItemLeft" align="right" valign="top">static readonly int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#af123110d7594a9000b76b14df6eafd51">PICKUP_AND_DELIVERY_FIFO</a> = <a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1operations__research__constraint__solverPINVOKE.html#aafb32e868a7d78ee6f888b31b38b81f3">operations_research_constraint_solverPINVOKE.RoutingModel_PICKUP_AND_DELIVERY_FIFO_get</a>()</td></tr>
 <tr class="separator:af123110d7594a9000b76b14df6eafd51"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a14091cd6563e21da66d15830e0c4a2dd"><td class="memItemLeft" align="right" valign="top">static readonly int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#a14091cd6563e21da66d15830e0c4a2dd">TYPE_ADDED_TO_VEHICLE</a> = <a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1operations__research__constraint__solverPINVOKE.html#aa3e9a1df8a5d93c106d97ea513831184">operations_research_constraint_solverPINVOKE.RoutingModel_TYPE_ADDED_TO_VEHICLE_get</a>()</td></tr>
+<tr class="separator:a14091cd6563e21da66d15830e0c4a2dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae3fe9f28a4068fa11eaa589292d4d54d"><td class="memItemLeft" align="right" valign="top">static readonly int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#ae3fe9f28a4068fa11eaa589292d4d54d">ADDED_TYPE_REMOVED_FROM_VEHICLE</a> = <a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1operations__research__constraint__solverPINVOKE.html#a9a10bfbca588ff0b1cb6a71eb225c4b8">operations_research_constraint_solverPINVOKE.RoutingModel_ADDED_TYPE_REMOVED_FROM_VEHICLE_get</a>()</td></tr>
+<tr class="separator:ae3fe9f28a4068fa11eaa589292d4d54d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad498c2e98ed6e6410f687f78e87623e2"><td class="memItemLeft" align="right" valign="top">static readonly int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#ad498c2e98ed6e6410f687f78e87623e2">TYPE_ON_VEHICLE_UP_TO_VISIT</a> = <a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1operations__research__constraint__solverPINVOKE.html#a6df2bdc1c2218afd4e9e2a80b1edcc22">operations_research_constraint_solverPINVOKE.RoutingModel_TYPE_ON_VEHICLE_UP_TO_VISIT_get</a>()</td></tr>
+<tr class="separator:ad498c2e98ed6e6410f687f78e87623e2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3220ee077b1c243d507abcbc664c59af"><td class="memItemLeft" align="right" valign="top">static readonly int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#a3220ee077b1c243d507abcbc664c59af">TYPE_SIMULTANEOUSLY_ADDED_AND_REMOVED</a> = <a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1operations__research__constraint__solverPINVOKE.html#a0223e0fae3de88cb001560b3b8b50326">operations_research_constraint_solverPINVOKE.RoutingModel_TYPE_SIMULTANEOUSLY_ADDED_AND_REMOVED_get</a>()</td></tr>
+<tr class="separator:a3220ee077b1c243d507abcbc664c59af"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
+Protected Member Functions</h2></td></tr>
+<tr class="memitem:a8ad4348ef0f9969025bab397e7e27e26"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1RoutingModel.html#a8ad4348ef0f9969025bab397e7e27e26">Dispose</a> (bool disposing)</td></tr>
+<tr class="separator:a8ad4348ef0f9969025bab397e7e27e26"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-attribs"></a>
 Protected Attributes</h2></td></tr>
@@ -370,7 +394,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00094">94</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00098">98</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -408,7 +432,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00098">98</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00102">102</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -437,7 +461,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00617">617</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00646">646</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -465,7 +489,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00397">397</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00426">426</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -515,7 +539,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00152">152</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00156">156</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -571,7 +595,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00146">146</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00150">150</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -627,7 +651,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00122">122</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00126">126</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -683,7 +707,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00134">134</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00138">138</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -739,7 +763,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00140">140</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00144">144</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -795,7 +819,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00128">128</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00132">132</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -823,7 +847,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00208">208</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00212">212</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -861,7 +885,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00204">204</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00208">208</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -905,7 +929,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00200">200</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00204">204</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -933,7 +957,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00556">556</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00585">585</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -961,7 +985,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00560">560</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00589">589</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -989,7 +1013,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00389">389</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00418">418</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1027,7 +1051,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00268">268</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00272">272</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1065,7 +1089,83 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00272">272</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00276">276</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+
+</div>
+</div>
+<a id="ad74eb0736dcac1394cdecd3e63dd1314"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad74eb0736dcac1394cdecd3e63dd1314">&#9670;&nbsp;</a></span>AddRequiredTypeAlternativesWhenAddingType()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AddRequiredTypeAlternativesWhenAddingType </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>dependent_type</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">SWIGTYPE_p_absl__flat_hash_setT_int_t&#160;</td>
+          <td class="paramname"><em>required_type_alternatives</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00317">317</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+
+</div>
+</div>
+<a id="a2a7cc0ae71e4f17302b174bbb8e359df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a7cc0ae71e4f17302b174bbb8e359df">&#9670;&nbsp;</a></span>AddRequiredTypeAlternativesWhenRemovingType()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AddRequiredTypeAlternativesWhenRemovingType </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>dependent_type</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">SWIGTYPE_p_absl__flat_hash_setT_int_t&#160;</td>
+          <td class="paramname"><em>required_type_alternatives</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00322">322</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1093,7 +1193,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00393">393</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00422">422</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1131,7 +1231,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00255">255</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00259">259</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1159,7 +1259,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00552">552</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00581">581</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1187,7 +1287,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00405">405</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00434">434</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1215,7 +1315,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00401">401</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00430">430</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1253,7 +1353,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00413">413</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00442">442</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1303,7 +1403,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00158">158</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00162">162</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1341,7 +1441,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00409">409</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00438">438</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1369,7 +1469,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00463">463</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00492">492</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1407,7 +1507,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00469">469</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00498">498</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1451,7 +1551,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00706">706</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00735">735</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1479,7 +1579,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00380">380</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00409">409</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1517,7 +1617,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00529">529</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00558">558</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1544,7 +1644,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00723">723</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00752">752</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1571,7 +1671,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00417">417</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00446">446</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1599,7 +1699,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00421">421</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00450">450</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1627,7 +1727,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00545">545</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00574">574</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1655,7 +1755,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00538">538</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00567">567</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1682,7 +1782,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00453">453</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00482">482</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1720,7 +1820,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00376">376</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00405">405</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1747,7 +1847,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00646">646</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00675">675</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1774,7 +1874,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00635">635</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00664">664</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1812,12 +1912,39 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00711">711</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00740">740</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
-<a id="a1b40a2658f30f8466f310ceea310afb5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1b40a2658f30f8466f310ceea310afb5">&#9670;&nbsp;</a></span>Dispose()</h2>
+<a id="a6e2d745cdb7a7b983f861ed6a9a541a7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6e2d745cdb7a7b983f861ed6a9a541a7">&#9670;&nbsp;</a></span>Dispose() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Dispose </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00035">35</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+
+</div>
+</div>
+<a id="a8ad4348ef0f9969025bab397e7e27e26"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ad4348ef0f9969025bab397e7e27e26">&#9670;&nbsp;</a></span>Dispose() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1828,18 +1955,19 @@ Properties</h2></td></tr>
         <tr>
           <td class="memname">virtual void Dispose </td>
           <td>(</td>
-          <td class="paramname"></td><td>)</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>disposing</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00035">35</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00040">40</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1867,7 +1995,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00569">569</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00598">598</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1894,7 +2022,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00352">352</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00381">381</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1921,7 +2049,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00364">364</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00393">393</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -1965,7 +2093,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00661">661</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00690">690</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2003,7 +2131,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00656">656</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00685">685</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2047,7 +2175,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00641">641</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00670">670</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2074,7 +2202,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00675">675</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00704">704</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2102,7 +2230,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00666">666</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00695">695</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2129,7 +2257,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00318">318</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00347">347</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2157,7 +2285,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00177">177</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00181">181</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2185,7 +2313,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00224">224</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00228">228</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2213,7 +2341,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00212">212</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00216">216</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2241,7 +2369,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00241">241</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00245">245</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2269,7 +2397,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00236">236</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00240">240</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2297,7 +2425,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00339">339</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00368">368</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2335,7 +2463,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00651">651</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00680">680</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2363,7 +2491,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00183">183</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00187">187</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2390,7 +2518,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00680">680</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00709">709</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2418,7 +2546,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00743">743</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00772">772</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2445,7 +2573,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00246">246</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00250">250</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2473,7 +2601,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00748">748</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00777">777</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2500,7 +2628,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00303">303</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00312">312</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2527,7 +2655,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00289">289</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00293">293</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2555,7 +2683,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00284">284</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00288">288</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2582,7 +2710,63 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00195">195</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00199">199</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+
+</div>
+</div>
+<a id="a450927393434e1fa5b413e763a82c29e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a450927393434e1fa5b413e763a82c29e">&#9670;&nbsp;</a></span>GetRequiredTypeAlternativesWhenAddingType()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">SWIGTYPE_p_std__vectorT_absl__flat_hash_setT_int_t_t GetRequiredTypeAlternativesWhenAddingType </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>type</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00327">327</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+
+</div>
+</div>
+<a id="aa634a76f4da6df02b9b94ae7b76fdd25"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa634a76f4da6df02b9b94ae7b76fdd25">&#9670;&nbsp;</a></span>GetRequiredTypeAlternativesWhenRemovingType()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">SWIGTYPE_p_std__vectorT_absl__flat_hash_setT_int_t_t GetRequiredTypeAlternativesWhenRemovingType </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>type</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00332">332</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2610,7 +2794,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00694">694</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00723">723</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2637,7 +2821,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00458">458</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00487">487</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2664,7 +2848,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00689">689</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00718">718</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2692,7 +2876,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00685">685</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00714">714</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2720,7 +2904,35 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00298">298</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00302">302</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+
+</div>
+</div>
+<a id="a5d39e29ef34d15e9addf42185bf57fa2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d39e29ef34d15e9addf42185bf57fa2">&#9670;&nbsp;</a></span>GetVisitTypePolicy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int GetVisitTypePolicy </td>
+          <td>(</td>
+          <td class="paramtype">long&#160;</td>
+          <td class="paramname"><em>index</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00307">307</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2748,7 +2960,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00171">171</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00175">175</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2776,7 +2988,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00670">670</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00699">699</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2803,7 +3015,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00251">251</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00255">255</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2831,7 +3043,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00579">579</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00608">608</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2858,7 +3070,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00753">753</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00782">782</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2886,7 +3098,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00574">574</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00603">603</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2924,7 +3136,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00263">263</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00267">267</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -2962,7 +3174,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00595">595</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00624">624</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3000,7 +3212,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00758">758</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00787">787</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3044,7 +3256,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00164">164</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00168">168</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3072,7 +3284,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00764">764</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00793">793</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3099,7 +3311,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00484">484</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00513">513</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3137,7 +3349,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00589">589</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00618">618</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3164,7 +3376,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00601">601</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00630">630</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3192,7 +3404,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00611">611</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00640">640</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3219,7 +3431,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00728">728</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00757">757</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3246,7 +3458,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00478">478</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00507">507</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3274,7 +3486,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00496">496</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00525">525</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3312,7 +3524,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00510">510</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00539">539</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3340,7 +3552,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00117">117</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00121">121</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3368,7 +3580,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00107">107</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00111">111</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3396,7 +3608,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00112">112</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00116">116</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3424,7 +3636,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00102">102</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00106">106</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3452,7 +3664,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00503">503</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00532">532</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3502,7 +3714,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00520">520</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00549">549</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3540,7 +3752,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00259">259</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00263">263</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3578,7 +3790,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00344">344</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00373">373</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3622,7 +3834,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00348">348</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00377">377</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3650,7 +3862,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00323">323</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00352">352</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3688,7 +3900,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00327">327</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00356">356</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3732,7 +3944,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00449">449</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00478">478</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3760,7 +3972,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00385">385</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00414">414</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3788,7 +4000,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00331">331</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00360">360</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3826,7 +4038,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00335">335</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00364">364</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3854,7 +4066,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00276">276</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00280">280</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3892,7 +4104,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00280">280</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00284">284</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3920,12 +4132,12 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00190">190</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00194">194</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
-<a id="ae9a4b32049c139b3bf5710781ad2727b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae9a4b32049c139b3bf5710781ad2727b">&#9670;&nbsp;</a></span>SetVisitType()</h2>
+<a id="a0582c845c07b1b0dd1aa8d4db4c1581d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0582c845c07b1b0dd1aa8d4db4c1581d">&#9670;&nbsp;</a></span>SetVisitType()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -3943,7 +4155,13 @@ Properties</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>type</em>&#160;</td>
+          <td class="paramname"><em>type</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>type_policy</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -3958,7 +4176,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00294">294</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00298">298</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -3985,7 +4203,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00738">738</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00767">767</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4012,7 +4230,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00431">431</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00460">460</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4040,7 +4258,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00425">425</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00454">454</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4078,7 +4296,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00443">443</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00472">472</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4105,7 +4323,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00717">717</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00746">746</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4133,7 +4351,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00437">437</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00466">466</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4161,7 +4379,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00564">564</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00593">593</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4189,7 +4407,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00308">308</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00337">337</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4227,7 +4445,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00313">313</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00342">342</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4255,7 +4473,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00623">623</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00652">652</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4283,7 +4501,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00584">584</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00613">613</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4310,7 +4528,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00733">733</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00762">762</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4338,7 +4556,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00629">629</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00658">658</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4365,7 +4583,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00606">606</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00635">635</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4393,11 +4611,35 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00490">490</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00519">519</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
+<a id="ae3fe9f28a4068fa11eaa589292d4d54d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae3fe9f28a4068fa11eaa589292d4d54d">&#9670;&nbsp;</a></span>ADDED_TYPE_REMOVED_FROM_VEHICLE</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">readonly int ADDED_TYPE_REMOVED_FROM_VEHICLE = <a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1operations__research__constraint__solverPINVOKE.html#a9a10bfbca588ff0b1cb6a71eb225c4b8">operations_research_constraint_solverPINVOKE.RoutingModel_ADDED_TYPE_REMOVED_FROM_VEHICLE_get</a>()</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00813">813</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+
+</div>
+</div>
 <a id="af123110d7594a9000b76b14df6eafd51"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af123110d7594a9000b76b14df6eafd51">&#9670;&nbsp;</a></span>PICKUP_AND_DELIVERY_FIFO</h2>
 
@@ -4418,7 +4660,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00780">780</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00809">809</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4442,7 +4684,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00779">779</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00808">808</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4466,7 +4708,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00778">778</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00807">807</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4490,7 +4732,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00773">773</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00802">802</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4514,7 +4756,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00774">774</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00803">803</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4538,7 +4780,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00775">775</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00804">804</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4562,7 +4804,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00771">771</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00800">800</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4586,7 +4828,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00772">772</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00801">801</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4614,6 +4856,78 @@ Properties</h2></td></tr>
 
 </div>
 </div>
+<a id="a14091cd6563e21da66d15830e0c4a2dd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a14091cd6563e21da66d15830e0c4a2dd">&#9670;&nbsp;</a></span>TYPE_ADDED_TO_VEHICLE</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">readonly int TYPE_ADDED_TO_VEHICLE = <a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1operations__research__constraint__solverPINVOKE.html#aa3e9a1df8a5d93c106d97ea513831184">operations_research_constraint_solverPINVOKE.RoutingModel_TYPE_ADDED_TO_VEHICLE_get</a>()</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00812">812</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+
+</div>
+</div>
+<a id="ad498c2e98ed6e6410f687f78e87623e2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad498c2e98ed6e6410f687f78e87623e2">&#9670;&nbsp;</a></span>TYPE_ON_VEHICLE_UP_TO_VISIT</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">readonly int TYPE_ON_VEHICLE_UP_TO_VISIT = <a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1operations__research__constraint__solverPINVOKE.html#a6df2bdc1c2218afd4e9e2a80b1edcc22">operations_research_constraint_solverPINVOKE.RoutingModel_TYPE_ON_VEHICLE_UP_TO_VISIT_get</a>()</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00814">814</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+
+</div>
+</div>
+<a id="a3220ee077b1c243d507abcbc664c59af"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3220ee077b1c243d507abcbc664c59af">&#9670;&nbsp;</a></span>TYPE_SIMULTANEOUSLY_ADDED_AND_REMOVED</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">readonly int TYPE_SIMULTANEOUSLY_ADDED_AND_REMOVED = <a class="el" href="classGoogle_1_1OrTools_1_1ConstraintSolver_1_1operations__research__constraint__solverPINVOKE.html#a0223e0fae3de88cb001560b3b8b50326">operations_research_constraint_solverPINVOKE.RoutingModel_TYPE_SIMULTANEOUSLY_ADDED_AND_REMOVED_get</a>()</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00815">815</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+
+</div>
+</div>
 <h2 class="groupheader">Property Documentation</h2>
 <a id="ace4cb8af93992407099cb0a3115dca75"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ace4cb8af93992407099cb0a3115dca75">&#9670;&nbsp;</a></span>kNoDimension</h2>
@@ -4635,7 +4949,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00087">87</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00091">91</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4659,7 +4973,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00080">80</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00084">84</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>
@@ -4683,7 +4997,7 @@ Properties</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00073">73</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="RoutingModel_8cs_source.html#l00077">77</a> of file <a class="el" href="RoutingModel_8cs_source.html">RoutingModel.cs</a>.</p>
 
 </div>
 </div>

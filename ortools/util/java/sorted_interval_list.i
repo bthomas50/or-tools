@@ -40,6 +40,8 @@
 %rename (buildComplementOnInterval) operations_research::SortedDisjointIntervalList::BuildComplementOnInterval;
 %rename (toString) operations_research::SortedDisjointIntervalList::DebugString;
 
+// Make the SWIG-generated constructor public.
+// This is necessary as it will be called from the sat package.
 SWIG_JAVABODY_PROXY(/*PTRCTOR_VISIBILITY=*/public,
                     /*CPTR_VISIBILITY=*/protected,
                     /*TYPE...=*/SWIGTYPE)
@@ -66,4 +68,5 @@ SWIG_JAVABODY_PROXY(/*PTRCTOR_VISIBILITY=*/public,
 %rename (unionWith) operations_research::Domain::UnionWith;
 
 %include "ortools/util/sorted_interval_list.h"
+
 %unignoreall

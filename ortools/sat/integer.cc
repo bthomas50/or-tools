@@ -24,6 +24,21 @@
 namespace operations_research {
 namespace sat {
 
+// var * coeff + constant >= bound.
+IntegerLiteral AffineExpression::GreaterOrEqual(IntegerValue bound) const {
+  CHECK_NE(var, kNoIntegerVariable);
+  CHECK_GT(coeff, 0);
+  return IntegerLiteral::GreaterOrEqual(var,
+                                        CeilRatio(bound - constant, coeff));
+}
+
+// var * coeff + constant <= bound.
+IntegerLiteral AffineExpression::LowerOrEqual(IntegerValue bound) const {
+  CHECK_NE(var, kNoIntegerVariable);
+  CHECK_GT(coeff, 0);
+  return IntegerLiteral::LowerOrEqual(var, FloorRatio(bound - constant, coeff));
+}
+
 std::vector<IntegerVariable> NegationOf(
     const std::vector<IntegerVariable>& vars) {
   std::vector<IntegerVariable> result(vars.size());
@@ -528,6 +543,7 @@ bool IntegerTrail::Propagate(Trail* trail) {
 }
 
 void IntegerTrail::Untrail(const Trail& trail, int literal_trail_index) {
+  ++num_untrails_;
   const int level = trail.CurrentDecisionLevel();
   for (ReversibleInterface* rev : reversible_classes_) rev->SetLevel(level);
   var_to_current_lb_interval_index_.SetLevel(level);
@@ -1081,16 +1097,16 @@ bool IntegerTrail::EnqueueInternal(
   DCHECK(lazy_reason != nullptr ||
          ReasonIsValid(literal_reason, integer_reason));
 
+  const IntegerVariable var(i_lit.var);
+
   // No point doing work if the variable is already ignored.
-  if (IsCurrentlyIgnored(i_lit.var)) return true;
+  if (IsCurrentlyIgnored(var)) return true;
 
   // Nothing to do if the bound is not better than the current one.
   // TODO(user): Change this to a CHECK? propagator shouldn't try to push such
   // bound and waste time explaining it.
-  if (i_lit.bound <= vars_[i_lit.var].current_bound) return true;
+  if (i_lit.bound <= vars_[var].current_bound) return true;
   ++num_enqueues_;
-
-  const IntegerVariable var(i_lit.var);
 
   // If the domain of var is not a single intervals and i_lit.bound fall into a
   // "hole", we increase it to the next possible value. This ensure that we

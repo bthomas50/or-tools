@@ -22,12 +22,12 @@ PROTOC_BINARY := $(shell $(WHICH) ${UNIX_PROTOC_BINARY})
 GFLAGS_TAG = 2.2.2
 GLOG_TAG = 0.4.0
 PROTOBUF_TAG = 3.6.1
-ABSL_TAG = 8ba96a8
-CBC_TAG = 2.10.3
-CGL_TAG = 0.60.2
-CLP_TAG = 1.17.3
-OSI_TAG = 0.108.4
-COINUTILS_TAG = 2.11.2
+ABSL_TAG = 20200225.2
+CBC_TAG = 2.10.5
+CGL_TAG = 0.60.3
+CLP_TAG = 1.17.4
+OSI_TAG = 0.108.6
+COINUTILS_TAG = 2.11.4
 PATCHELF_TAG = 0.10
 
 # Main target.
@@ -124,6 +124,9 @@ install_deps_directories: \
  dependencies/install/bin \
  dependencies/install/lib/pkgconfig \
  dependencies/install/include/coin
+
+dependencies/sources:
+	$(MKDIR_P) dependencies$Ssources
 
 dependencies/install:
 	$(MKDIR_P) dependencies$Sinstall
@@ -278,9 +281,9 @@ dependencies/install/lib/libprotobuf.$L: dependencies/install/lib/libglog.$L dep
   $(CMAKE) --build build_cmake -- -j 4 && \
   $(CMAKE) --build build_cmake --target install
 
-dependencies/sources/protobuf-$(PROTOBUF_TAG): patches/protobuf.patch | dependencies/sources
+dependencies/sources/protobuf-$(PROTOBUF_TAG): patches/protobuf-$(PROTOBUF_TAG).patch | dependencies/sources
 	-$(DELREC) dependencies/sources/protobuf-$(PROTOBUF_TAG)
-	git clone --quiet -b v$(PROTOBUF_TAG) https://github.com/google/protobuf.git dependencies/sources/protobuf-$(PROTOBUF_TAG)
+	git clone --quiet -b $(PROTOBUF_TAG) https://github.com/google/protobuf.git dependencies/sources/protobuf-$(PROTOBUF_TAG)
 	cd dependencies/sources/protobuf-$(PROTOBUF_TAG) && \
     git apply "$(OR_TOOLS_TOP)/patches/protobuf-3.7.1.patch"
 
@@ -370,7 +373,6 @@ $(_ABSL_STATIC_LIB_DIR)libabsl_examine_stack.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_failure_signal_handler.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_flags.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_flags_config.a \
-$(_ABSL_STATIC_LIB_DIR)libabsl_flags_handle.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_flags_internal.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_flags_marshalling.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_flags_parse.a \
@@ -401,6 +403,7 @@ $(_ABSL_STATIC_LIB_DIR)libabsl_raw_logging_internal.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_scoped_set_env.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_spinlock_wait.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_stacktrace.a \
+$(_ABSL_STATIC_LIB_DIR)libabsl_status.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_str_format_internal.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_strings.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_strings_internal.a \
@@ -409,6 +412,7 @@ $(_ABSL_STATIC_LIB_DIR)libabsl_throw_delegate.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_time.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_time_zone.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_exponential_biased.a \
+$(_ABSL_STATIC_LIB_DIR)libabsl_cord.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_int128.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_debugging_internal.a \
 $(_ABSL_STATIC_LIB_DIR)libabsl_demangle_internal.a \
