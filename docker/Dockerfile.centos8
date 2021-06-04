@@ -9,6 +9,7 @@ RUN yum install -y gcc \
   gmp-devel \
   make \
   mpfr-devel \
+  libarchive \
   libtool \
   pkg-config \
   python3 \
