@@ -1,7 +1,7 @@
 # Project Files unneeded by docker
 .dockerignore
 
-.git
+#.git
 .gitignore
 
 .travis.yml

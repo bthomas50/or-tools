@@ -371,6 +371,7 @@ MPSolver::ResultStatus CBCInterface::Solve(const MPSolverParameters& param) {
   if (solver_->time_limit() != 0) {
     VLOG(1) << "Setting time limit = " << solver_->time_limit() << " ms.";
     model.setMaximumSeconds(solver_->time_limit_in_secs());
+    model.setUseElapsedTime(1);
   }
 
   // And solve.
